@@ -1033,43 +1033,45 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
           </div>
         </div>
       )}
-     </>
-   );
+    </>
+  );
 };
 
 const QuizItem = ({ question, index, topicId, savedAnswer, onSaveAnswer }) => {
   const [selectedOption, setSelectedOption] = useState(savedAnswer?.userAnswer ?? null);
   const [inputAnswer, setInputAnswer] = useState(savedAnswer?.userAnswer ?? '');
-  const [showExplanation, setShowExplanation] = useState(savedAnswer !== undefined);
+  const [showResult, setShowResult] = useState(savedAnswer !== undefined);
   
-  // 判断题目类型
   const isFillInBlank = !question.options;
   
-  const handleOptionClick = (optIndex) => {
+  const handleOptionChange = (optIndex) => {
     setSelectedOption(optIndex);
-    setShowExplanation(true);
-    const isCorrect = optIndex === question.correct;
-    onSaveAnswer(topicId, question.id, optIndex, isCorrect);
   };
   
-  const handleInputAnswer = () => {
-    setShowExplanation(true);
-    const isCorrect = inputAnswer.trim().toLowerCase() === String(question.correct).toLowerCase();
-    onSaveAnswer(topicId, question.id, inputAnswer.trim(), isCorrect);
-  };
-  
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !showExplanation) {
-      handleInputAnswer();
+  const handleCheckAnswer = () => {
+    setShowResult(true);
+    if (!isFillInBlank) {
+      const isCorrect = selectedOption === question.correct;
+      onSaveAnswer(topicId, question.id, selectedOption, isCorrect);
+    } else {
+      const isCorrect = inputAnswer.trim().toLowerCase() === String(question.correct).toLowerCase();
+      onSaveAnswer(topicId, question.id, inputAnswer.trim(), isCorrect);
     }
   };
   
-  const isCorrectOption = (optIndex) => optIndex === question.correct;
-  const isWrongOption = (optIndex) => showExplanation && selectedOption === optIndex && !isCorrectOption(optIndex);
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !showResult) {
+      handleCheckAnswer();
+    }
+  };
   
-  const isFillInCorrect = () => isFillInBlank && showExplanation && 
-    inputAnswer.trim().toLowerCase() === String(question.correct).toLowerCase();
-  const isFillInWrong = () => isFillInBlank && showExplanation && !isFillInCorrect();
+  const isCorrectAnswer = () => {
+    if (!isFillInBlank) {
+      return selectedOption === question.correct;
+    } else {
+      return inputAnswer.trim().toLowerCase() === String(question.correct).toLowerCase();
+    }
+  };
 
   return (
     <div style={{ 
@@ -1077,7 +1079,7 @@ const QuizItem = ({ question, index, topicId, savedAnswer, onSaveAnswer }) => {
       paddingBottom: '24px', 
       borderBottom: index < question.length - 1 ? '1px solid #eee' : 'none' 
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
         <p style={{ fontWeight: 500, margin: 0, color: '#333' }}>
           {index + 1}. {question.text}
         </p>
@@ -1096,46 +1098,104 @@ const QuizItem = ({ question, index, topicId, savedAnswer, onSaveAnswer }) => {
       </div>
       
       {!isFillInBlank ? (
-        /* 选择题 */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
           {question.options.map((opt, optIndex) => (
-            <button
+            <div
               key={optIndex}
-              onClick={() => !showExplanation && handleOptionClick(optIndex)}
-              disabled={showExplanation}
               style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
                 padding: '12px 16px',
-                border: showExplanation 
-                  ? (isCorrectOption(optIndex) 
+                border: showResult 
+                  ? (optIndex === question.correct 
                     ? '2px solid #4caf50' 
-                    : (isWrongOption(optIndex) ? '2px solid #f44336' : '1px solid #ddd'))
+                    : (selectedOption === optIndex && !isCorrectAnswer() ? '2px solid #f44336' : '1px solid #ddd'))
                   : (selectedOption === optIndex ? '2px solid #667eea' : '1px solid #ddd'),
                 borderRadius: '8px',
-                background: showExplanation 
-                  ? (isCorrectOption(optIndex) 
+                background: showResult 
+                  ? (optIndex === question.correct 
                     ? '#e8f5e9' 
-                    : (isWrongOption(optIndex) ? '#ffebee' : 'white'))
+                    : (selectedOption === optIndex && !isCorrectAnswer() ? '#ffebee' : 'white'))
                   : (selectedOption === optIndex ? '#f3e5f5' : 'white'),
-                cursor: showExplanation ? 'default' : 'pointer',
-                textAlign: 'left',
+                cursor: showResult ? 'default' : 'pointer',
                 transition: 'all 0.3s ease',
-                opacity: showExplanation && selectedOption !== optIndex && !isCorrectOption(optIndex) ? 0.6 : 1,
-                fontSize: '14px'
+                opacity: showResult && selectedOption !== optIndex && optIndex !== question.correct ? 0.6 : 1
+              }}
+              onClick={() => !showResult && handleOptionChange(optIndex)}
+            >
+              <input
+                type="radio"
+                name={`question-${question.id}`}
+                checked={selectedOption === optIndex}
+                onChange={() => !showResult && handleOptionChange(optIndex)}
+                disabled={showResult}
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  marginTop: '2px',
+                  flexShrink: 0,
+                  cursor: showResult ? 'default' : 'pointer',
+                  accentColor: '#667eea'
+                }}
+              />
+              <span style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                {opt}
+                {showResult && optIndex === question.correct && (
+                  <span style={{ color: '#4caf50', fontWeight: 600, marginLeft: '8px' }}>✓ 正确</span>
+                )}
+                {showResult && selectedOption === optIndex && !isCorrectAnswer() && (
+                  <span style={{ color: '#f44336', fontWeight: 600, marginLeft: '8px' }}>✗ 错误</span>
+                )}
+              </span>
+            </div>
+          ))}
+          
+          {!showResult && (
+            <button
+              onClick={handleCheckAnswer}
+              disabled={selectedOption === null}
+              style={{
+                marginTop: '12px',
+                padding: '10px 24px',
+                background: selectedOption === null ? '#ddd' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: selectedOption === null ? 'not-allowed' : 'pointer',
+                fontWeight: 500,
+                fontSize: '14px',
+                width: 'fit-content'
               }}
             >
-              <span style={{ fontWeight: 500, marginRight: '8px' }}>
-                {String.fromCharCode(65 + optIndex)}.
-              </span>
-              {opt}
-              {showExplanation && isCorrectOption(optIndex) && ' ✓'}
-              {showExplanation && isWrongOption(optIndex) && ' ✗'}
+              检查答案
             </button>
-          ))}
+          )}
+          
+          {showResult && (
+            <div style={{
+              marginTop: '16px',
+              padding: '16px',
+              background: isCorrectAnswer() ? '#e8f5e9' : '#fff3e0',
+              borderRadius: '8px',
+              borderLeft: '4px solid ' + (isCorrectAnswer() ? '#4caf50' : '#ff9800')
+            }}>
+              <p style={{ 
+                fontWeight: 600, 
+                margin: '0 0 8px 0',
+                color: isCorrectAnswer() ? '#2e7d32' : '#e65100'
+              }}>
+                {isCorrectAnswer() ? '🎉 回答正确！' : '❌ 回答错误'}
+              </p>
+              <p style={{ margin: 0, color: '#666', lineHeight: '1.6' }}>
+                {question.explanation}
+              </p>
+            </div>
+          )}
         </div>
       ) : (
-        /* 填空题 */
         <div style={{ marginTop: '12px' }}>
-          {!showExplanation ? (
+          {!showResult ? (
             <div style={{ display: 'flex', gap: '8px' }}>
               <input
                 type="text"
@@ -1156,71 +1216,63 @@ const QuizItem = ({ question, index, topicId, savedAnswer, onSaveAnswer }) => {
                 onBlur={(e) => e.target.style.borderColor = '#ddd'}
               />
               <button
-                onClick={handleInputAnswer}
+                onClick={handleCheckAnswer}
+                disabled={!inputAnswer.trim()}
                 style={{
                   padding: '12px 24px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: !inputAnswer.trim() ? '#ddd' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor: !inputAnswer.trim() ? 'not-allowed' : 'pointer',
                   fontWeight: 500,
                   fontSize: '14px'
                 }}
               >
-                确认答案
+                检查答案
               </button>
             </div>
           ) : (
             <div>
               <div style={{ 
                 padding: '12px 16px', 
-                background: isFillInCorrect() ? '#e8f5e9' : '#ffebee', 
-                border: isFillInCorrect() ? '2px solid #4caf50' : '2px solid #f44336',
+                background: isCorrectAnswer() ? '#e8f5e9' : '#ffebee', 
+                border: isCorrectAnswer() ? '2px solid #4caf50' : '2px solid #f44336',
                 borderRadius: '8px',
-                marginBottom: '8px'
+                marginBottom: '12px'
               }}>
                 <span style={{ fontWeight: 500, marginRight: '8px' }}>你的答案：</span>
-                <span style={{ color: isFillInCorrect() ? '#2e7d32' : '#c62828' }}>{inputAnswer}</span>
-                {isFillInCorrect() && ' ✓'}
-                {isFillInWrong() && ' ✗'}
+                <span style={{ color: isCorrectAnswer() ? '#2e7d32' : '#c62828' }}>{inputAnswer}</span>
+                {isCorrectAnswer() ? ' ✓' : ' ✗'}
               </div>
               <div style={{ 
                 padding: '12px 16px', 
                 background: '#f5f5f5', 
                 borderRadius: '8px',
-                marginTop: '8px'
+                marginBottom: '12px'
               }}>
                 <span style={{ fontWeight: 500, marginRight: '8px' }}>正确答案：</span>
                 <span style={{ color: '#2e7d32', fontWeight: 500 }}>{question.correct}</span>
               </div>
+              <div style={{
+                padding: '16px',
+                background: isCorrectAnswer() ? '#e8f5e9' : '#fff3e0',
+                borderRadius: '8px',
+                borderLeft: '4px solid ' + (isCorrectAnswer() ? '#4caf50' : '#ff9800')
+              }}>
+                <p style={{ 
+                  fontWeight: 600, 
+                  margin: '0 0 8px 0',
+                  color: isCorrectAnswer() ? '#2e7d32' : '#e65100'
+                }}>
+                  {isCorrectAnswer() ? '🎉 回答正确！' : '❌ 回答错误'}
+                </p>
+                <p style={{ margin: 0, color: '#666', lineHeight: '1.6' }}>
+                  {question.explanation}
+                </p>
+              </div>
             </div>
           )}
-        </div>
-      )}
-      
-      {showExplanation && (
-        <div style={{
-          marginTop: '16px',
-          padding: '16px',
-          background: (() => {
-            if (isFillInBlank) return isFillInCorrect() ? '#e8f5e9' : '#fff3e0';
-            return selectedOption === question.correct ? '#e8f5e9' : '#fff3e0';
-          })(),
-          borderRadius: '8px',
-          borderLeft: `4px solid ${(() => {
-            if (isFillInBlank) return isFillInCorrect() ? '#4caf50' : '#ff9800';
-            return selectedOption === question.correct ? '#4caf50' : '#ff9800';
-          })()}`,
-          borderTop: '1px solid #eee'
-        }}>
-          <p style={{ fontWeight: 500, marginBottom: '8px', color: '#333' }}>
-            {(() => {
-              if (isFillInBlank) return isFillInCorrect() ? '✅ 回答正确！' : '❌ 回答错误';
-              return selectedOption === question.correct ? '✅ 回答正确！' : '❌ 回答错误';
-            })()}
-          </p>
-          <p style={{ color: '#666', lineHeight: 1.6, margin: 0 }}>{question.explanation}</p>
         </div>
       )}
     </div>
