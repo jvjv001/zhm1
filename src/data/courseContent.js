@@ -60,6 +60,70 @@ print(df)`,
         ]
       },
       {
+        title: '从不同数据源创建Series',
+        code: `import pandas as pd
+
+# 从列表创建Series
+s1 = pd.Series([10, 20, 30, 40], name='数值')
+print("从列表创建:")
+print(s1)
+
+# 从字典创建Series（键会变成索引）
+dict_data = {'北京': 1000, '上海': 1200, '广州': 900, '深圳': 1100}
+s2 = pd.Series(dict_data, name='城市销售额')
+print("\\n从字典创建:")
+print(s2)
+
+# 从单个标量创建
+s3 = pd.Series(5, index=['a', 'b', 'c', 'd'])
+print("\\n从标量创建:")
+print(s3)`,
+        explanation: [
+          { code: 'pd.Series([10, 20, 30, 40])', description: '最基本的创建方式，从Python列表创建Series，自动使用0,1,2,3作为索引。' },
+          { code: "dict_data = {'北京': 1000, ...}", description: '创建字典，键为城市名称，值为销售额。' },
+          { code: 'pd.Series(dict_data)', description: '从字典创建Series时，字典的键会自动成为Series的索引，值成为Series的数值。' },
+          { code: 'pd.Series(5, index=[...])', description: '从单个标量值创建Series时，必须同时指定索引，该值会被广播到所有索引位置。' }
+        ]
+      },
+      {
+        title: 'DataFrame的多种创建方式',
+        code: `import pandas as pd
+
+# 方式1：从字典创建（最常用）
+data1 = {
+    '姓名': ['张三', '李四', '王五'],
+    '年龄': [25, 30, 28],
+    '部门': ['技术', '市场', '销售']
+}
+df1 = pd.DataFrame(data1)
+print("方式1 - 从字典创建:")
+print(df1)
+
+# 方式2：从列表的列表创建
+data2 = [
+    ['张三', 25, '技术'],
+    ['李四', 30, '市场'],
+    ['王五', 28, '销售']
+]
+df2 = pd.DataFrame(data2, columns=['姓名', '年龄', '部门'])
+print("\\n方式2 - 从列表创建:")
+print(df2)
+
+# 方式3：从Series的字典创建
+s_name = pd.Series(['张三', '李四', '王五'])
+s_age = pd.Series([25, 30, 28])
+df3 = pd.DataFrame({'姓名': s_name, '年龄': s_age})
+print("\\n方式3 - 从Series字典创建:")
+print(df3)`,
+        explanation: [
+          { code: "data1 = {'姓名': [...], '年龄': [...]}", description: '这是创建DataFrame最常用的方式，每个键对应一列数据。' },
+          { code: 'pd.DataFrame(data1)', description: '字典中的键自动成为DataFrame的列名，列表长度必须一致。' },
+          { code: "data2 = [['张三', 25, '技术'], ...]", description: '每个子列表代表一行数据，需要配合columns参数指定列名。' },
+          { code: "columns=['姓名', '年龄', '部门']", description: '手动指定DataFrame的列名，与数据顺序对应。' },
+          { code: "pd.DataFrame({'姓名': s_name, ...})", description: '可以将多个Series组合起来创建DataFrame，Series的索引会自动对齐。' }
+        ]
+      },
+      {
         title: '数据访问和操作',
         code: `import pandas as pd
 
@@ -86,6 +150,73 @@ print(df)`,
           { code: "df['销量']", description: '使用列名访问DataFrame中的单列，返回一个Series对象。' },
           { code: 'df.head(2)', description: '返回DataFrame的前2行数据，常用于快速查看数据样本。' },
           { code: "df['销售额'] = df['销量'] * df['价格']", description: '通过计算创建新列，将销量和价格相乘得到销售额。' }
+        ]
+      },
+      {
+        title: '使用列名访问和修改数据',
+        code: `import pandas as pd
+
+# 创建销售数据
+df = pd.DataFrame({
+    '产品': ['苹果', '香蕉', '橙子', '葡萄', '西瓜'],
+    '销量': [120, 200, 150, 80, 300],
+    '价格': [5.5, 3.2, 4.8, 7.2, 2.5]
+})
+
+# 使用点操作符访问列
+print("使用点操作符访问销量列:")
+print(df.销量)
+
+# 同时访问多个列
+print("\\n访问产品和价格两列:")
+print(df[['产品', '价格']])
+
+# 修改列的值
+df['价格'] = df['价格'] * 1.1  # 价格上涨10%
+print("\\n价格上涨10%后:")
+print(df)
+
+# 删除列
+df = df.drop('价格', axis=1)
+print("\\n删除价格列后:")
+print(df)`,
+        explanation: [
+          { code: 'df.销量', description: '如果列名是合法的Python变量名，可以使用点操作符访问，等价于df["销量"]。' },
+          { code: "df[['产品', '价格']]", description: '使用列名的列表可以同时选择多个列，返回一个新的DataFrame。' },
+          { code: "df['价格'] = df['价格'] * 1.1", description: '可以像操作普通变量一样直接对整列数据进行修改。' },
+          { code: 'df.drop("价格", axis=1)', description: '删除指定列，axis=1表示按列操作（删除行使用axis=0）。' }
+        ]
+      },
+      {
+        title: '使用loc和iloc选择数据',
+        code: `import pandas as pd
+
+# 创建带自定义索引的DataFrame
+df = pd.DataFrame({
+    '产品': ['苹果', '香蕉', '橙子'],
+    '销量': [120, 200, 150],
+    '价格': [5.5, 3.2, 4.8]
+}, index=['a', 'b', 'c'])
+
+print("原始DataFrame:")
+print(df)
+
+# 使用loc按标签选择
+print("\\nloc['a':'b']（按标签选择）:")
+print(df.loc['a':'b'])
+
+# 使用iloc按位置选择
+print("\\niloc[0:2]（按位置选择前2行）:")
+print(df.iloc[0:2])
+
+# 选择特定行列
+print("\\nloc[:, ['产品', '销量']]:")
+print(df.loc[:, ['产品', '销量']])`,
+        explanation: [
+          { code: "index=['a', 'b', 'c']", description: '创建DataFrame时指定自定义索引标签，而不是默认的0,1,2。' },
+          { code: "df.loc['a':'b']", description: 'loc使用索引标签进行切片，注意：切片是包含结束标签的！' },
+          { code: 'df.iloc[0:2]', description: 'iloc使用整数位置进行切片，类似于Python列表的切片，不包含结束位置。' },
+          { code: "df.loc[:, ['产品', '销量']]", description: '逗号前是行选择，逗号后是列选择，:表示选择所有行。' }
         ]
       }
     ],
