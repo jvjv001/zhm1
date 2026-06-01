@@ -7,5 +7,5 @@ export default defineConfig({
     port: 3000,
     open: true
   },
-  base: '/zhm1/'  // 仓库名为 zhm1
+  base: '/'  // Cloudflare Pages 使用根路径
 })
