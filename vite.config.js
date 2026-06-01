@@ -6,5 +6,6 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true
-  }
+  },
+  base: '/zhm1/'  // 仓库名为 zhm1
 })
