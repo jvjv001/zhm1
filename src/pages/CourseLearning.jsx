@@ -11,6 +11,7 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
   const [runningCode, setRunningCode] = useState(null);
   const [consoleContent, setConsoleContent] = useState([]);
   const [consoleExpanded, setConsoleExpanded] = useState(false);
+  const [explanationModal, setExplanationModal] = useState({ isOpen: false, example: null });
   const codeRefs = useRef([]);
   const contentRef = useRef(null);
   
@@ -167,6 +168,14 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
 
   const handleClearConsole = () => {
     setConsoleContent([]);
+  };
+
+  const handleOpenExplanation = (example) => {
+    setExplanationModal({ isOpen: true, example });
+  };
+
+  const handleCloseExplanation = () => {
+    setExplanationModal({ isOpen: false, example: null });
   };
 
   const toggleExplanation = (index) => {
@@ -539,6 +548,25 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                           >
                             {copiedIndex === index ? '✅ 已复制' : '📋 复制'}
                           </button>
+                          {example.explanation && example.explanation.length > 0 && (
+                            <button
+                              onClick={() => handleOpenExplanation(example)}
+                              style={{
+                                padding: '6px 12px',
+                                background: 'rgba(255,255,255,0.1)',
+                                border: 'none',
+                                borderRadius: '6px',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                transition: 'all 0.3s ease',
+                                backdropFilter: 'blur(4px)'
+                              }}
+                            >
+                              📖 解释
+                            </button>
+                          )}
                         </div>
                       </div>
                       
@@ -808,8 +836,205 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
           </div>
         )}
       </div>
-    </>
-  );
+
+      {/* 逐行解释模态框 */}
+      {explanationModal.isOpen && explanationModal.example && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 2000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={handleCloseExplanation}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              maxWidth: '900px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'hidden',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 模态框头部 */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                padding: '20px 24px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
+                📖 代码逐行解释 {explanationModal.example.title && `- ${explanationModal.example.title}`}
+              </h3>
+              <button
+                onClick={handleCloseExplanation}
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  color: 'white',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 模态框内容 */}
+            <div
+              style={{
+                padding: '24px',
+                overflowY: 'auto',
+                flex: 1
+              }}
+            >
+              {/* 代码预览 */}
+              <div
+                style={{
+                  background: '#1e1e1e',
+                  color: '#d4d4d4',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                  fontFamily: "'Courier New', monospace",
+                  fontSize: '13px',
+                  lineHeight: '1.6',
+                  whiteSpace: 'pre-wrap',
+                  maxHeight: '200px',
+                  overflowY: 'auto'
+                }}
+              >
+                {explanationModal.example.code}
+              </div>
+
+              {/* 逐行解释列表 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {explanationModal.example.explanation.map((item, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      background: '#f8f9fa',
+                      borderRadius: '8px',
+                      padding: '16px',
+                      borderLeft: '4px solid #667eea'
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        marginBottom: '12px'
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          background: '#667eea',
+                          color: 'white',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          flexShrink: 0
+                        }}
+                      >
+                        {idx + 1}
+                      </div>
+                      <div
+                        style={{
+                          background: '#fff',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          fontFamily: "'Courier New', monospace",
+                          fontSize: '13px',
+                          color: '#333',
+                          fontWeight: 500,
+                          border: '1px solid #e0e0e0',
+                          wordBreak: 'break-all'
+                        }}
+                      >
+                        {item.code}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        color: '#666',
+                        fontSize: '14px',
+                        lineHeight: '1.6',
+                        paddingLeft: '40px'
+                      }}
+                    >
+                      {item.description}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 模态框底部 */}
+            <div
+              style={{
+                padding: '16px 24px',
+                borderTop: '1px solid #e0e0e0',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '12px'
+              }}
+            >
+              <button
+                onClick={handleCloseExplanation}
+                style={{
+                  padding: '10px 24px',
+                  background: '#f5f5f5',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#333',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#e8e8e8'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#f5f5f5'}
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+     </>
+   );
 };
 
 const QuizItem = ({ question, index, topicId, savedAnswer, onSaveAnswer }) => {
