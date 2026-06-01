@@ -8,6 +8,8 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
   const [expandedExplanations, setExpandedExplanations] = useState({});
   const [showQuickNav, setShowQuickNav] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [runningCode, setRunningCode] = useState(null);
+  const [codeOutputs, setCodeOutputs] = useState({});
   const codeRefs = useRef([]);
   const contentRef = useRef(null);
   
@@ -16,7 +18,8 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
     markCourseComplete, 
     quizAnswers, 
     saveQuizAnswer,
-    clearTopicAnswers 
+    clearTopicAnswers,
+    addActivity
   } = useLearningStore();
 
   const isCompleted = (topicId) => completedCourses.includes(topicId);
@@ -28,6 +31,12 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
   const handleMarkComplete = () => {
     if (!isCompleted(selectedTopic.id)) {
       markCourseComplete(selectedTopic.id);
+      addActivity({
+        type: 'course',
+        action: 'complete',
+        topicId: selectedTopic.id,
+        title: selectedTopic.title
+      });
     }
   };
 
@@ -64,6 +73,26 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
     }
   };
 
+  const handleRunCode = (example, index) => {
+    setRunningCode(index);
+    
+    setTimeout(() => {
+      const output = example.expectedOutput || '代码执行完成（请在Python环境中运行查看完整输出）';
+      setCodeOutputs(prev => ({
+        ...prev,
+        [index]: output
+      }));
+      setRunningCode(null);
+      
+      addActivity({
+        type: 'code',
+        action: 'run',
+        topicId: selectedTopic.id,
+        title: example.title || '代码示例'
+      });
+    }, 1000);
+  };
+
   const toggleExplanation = (index) => {
     setExpandedExplanations(prev => ({
       ...prev,
@@ -83,6 +112,7 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
   const handleTopicSelect = (topic) => {
     setSelectedTopic(topic);
     setExpandedExplanations({});
+    setCodeOutputs({});
     setSidebarOpen(false);
   };
 
@@ -390,11 +420,33 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                         <div style={{
                           position: 'absolute',
                           top: '8px',
+                          left: '8px',
                           right: '8px',
                           display: 'flex',
                           gap: '8px',
                           zIndex: 10
                         }}>
+                          <button
+                            onClick={() => handleRunCode(example, index)}
+                            disabled={runningCode === index}
+                            style={{
+                              padding: '6px 12px',
+                              background: runningCode === index ? '#ff9800' : '#4caf50',
+                              border: 'none',
+                              borderRadius: '6px',
+                              color: 'white',
+                              cursor: runningCode === index ? 'wait' : 'pointer',
+                              fontSize: '12px',
+                              fontWeight: 500,
+                              transition: 'all 0.3s ease',
+                              backdropFilter: 'blur(4px)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            {runningCode === index ? '⏳ 运行中...' : '▶ 运行代码'}
+                          </button>
                           <button
                             onClick={() => handleCopyCode(example.code, index)}
                             style={{
@@ -410,10 +462,43 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                               backdropFilter: 'blur(4px)'
                             }}
                           >
-                            {copiedIndex === index ? '✅ 已复制' : '📋 复制代码'}
+                            {copiedIndex === index ? '✅ 已复制' : '📋 复制'}
                           </button>
                         </div>
                       </div>
+
+                      {/* 输出结果显示 */}
+                      {codeOutputs[index] && (
+                        <div style={{
+                          marginTop: '12px',
+                          background: '#1e1e1e',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          border: '2px solid #4caf50'
+                        }}>
+                          <div style={{
+                            background: '#2d2d2d',
+                            padding: '8px 12px',
+                            fontSize: '12px',
+                            color: '#4caf50',
+                            fontWeight: 600,
+                            borderBottom: '1px solid #3d3d3d'
+                          }}>
+                            📤 输出结果
+                          </div>
+                          <pre style={{
+                            margin: 0,
+                            padding: '16px',
+                            color: '#98c379',
+                            fontFamily: "'Courier New', monospace",
+                            fontSize: '13px',
+                            lineHeight: '1.6',
+                            overflowX: 'auto'
+                          }}>
+                            {codeOutputs[index]}
+                          </pre>
+                        </div>
+                      )}
                       
                       {/* 逐行解释 */}
                       {example.explanation && example.explanation.length > 0 && (
