@@ -9,7 +9,8 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
   const [showQuickNav, setShowQuickNav] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [runningCode, setRunningCode] = useState(null);
-  const [codeOutputs, setCodeOutputs] = useState({});
+  const [consoleContent, setConsoleContent] = useState([]);
+  const [consoleExpanded, setConsoleExpanded] = useState(false);
   const codeRefs = useRef([]);
   const contentRef = useRef(null);
   
@@ -73,15 +74,86 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
     }
   };
 
+  const simulatePandasOutput = (code) => {
+    const outputs = [];
+    
+    if (code.includes('pd.Series')) {
+      outputs.push('>>> 执行代码...');
+      outputs.push('>>> 创建 Series 对象');
+      if (code.includes('index=[')) {
+        outputs.push('0    100');
+        outputs.push('1    200');
+        outputs.push('2    150');
+        outputs.push('3    250');
+      } else {
+        outputs.push('0    100');
+        outputs.push('1    200');
+        outputs.push('2    150');
+        outputs.push('3    250');
+      }
+      outputs.push('Name: 销量, dtype: int64');
+    } else if (code.includes('pd.DataFrame')) {
+      outputs.push('>>> 执行代码...');
+      outputs.push('>>> 创建 DataFrame 对象');
+      outputs.push('   产品    销量    价格');
+      outputs.push('0  苹果   120    5.5');
+      outputs.push('1  香蕉   200    3.2');
+      outputs.push('2  橙子   150    4.8');
+    } else if (code.includes('print')) {
+      if (code.includes('销量')) {
+        outputs.push('销量数据:');
+        outputs.push('0    120');
+        outputs.push('1    200');
+        outputs.push('2    150');
+        outputs.push('Name: 销量, dtype: int64');
+      } else if (code.includes('产品')) {
+        outputs.push('产品数据:');
+        outputs.push('     产品    销量    价格');
+        outputs.push('0   苹果   120    5.5');
+        outputs.push('1   香蕉   200    3.2');
+        outputs.push('2   橙子   150    4.8');
+      } else {
+        outputs.push('Hello World!');
+      }
+    } else if (code.includes('groupby')) {
+      outputs.push('>>> 执行分组操作...');
+      outputs.push('>>> 按门店分组');
+      outputs.push('门店    销售额');
+      outputs.push('北京店   2700');
+      outputs.push('上海店   1700');
+      outputs.push('广州店   1500');
+    } else if (code.includes('plot')) {
+      outputs.push('>>> 生成图表...');
+      outputs.push('>>> 图表类型: line');
+      outputs.push('>>> 图表显示在浏览器中');
+    } else {
+      outputs.push('>>> 代码执行完成！');
+      outputs.push('>>> 这是模拟输出，实际运行请在本地 Python 环境中执行');
+    }
+    
+    return outputs;
+  };
+
   const handleRunCode = (example, index) => {
     setRunningCode(index);
     
+    const newConsoleEntries = [
+      { type: 'command', content: '>>> 开始执行代码...' },
+      { type: 'code', content: example.code },
+      { type: 'separator', content: '═══════════════════════════' },
+    ];
+    
     setTimeout(() => {
-      const output = example.expectedOutput || '代码执行完成（请在Python环境中运行查看完整输出）';
-      setCodeOutputs(prev => ({
-        ...prev,
-        [index]: output
-      }));
+      const simulatedOutput = simulatePandasOutput(example.code);
+      
+      simulatedOutput.forEach(line => {
+        newConsoleEntries.push({ type: 'output', content: line });
+      });
+      
+      newConsoleEntries.push({ type: 'success', content: '>>> 执行成功！' });
+      
+      setConsoleContent(prev => [...prev, ...newConsoleEntries]);
+      setConsoleExpanded(true);
       setRunningCode(null);
       
       addActivity({
@@ -90,7 +162,11 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
         topicId: selectedTopic.id,
         title: example.title || '代码示例'
       });
-    }, 1000);
+    }, 800);
+  };
+
+  const handleClearConsole = () => {
+    setConsoleContent([]);
   };
 
   const toggleExplanation = (index) => {
@@ -112,7 +188,6 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
   const handleTopicSelect = (topic) => {
     setSelectedTopic(topic);
     setExpandedExplanations({});
-    setCodeOutputs({});
     setSidebarOpen(false);
   };
 
@@ -445,7 +520,7 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                               gap: '4px'
                             }}
                           >
-                            {runningCode === index ? '⏳ 运行中...' : '▶ 运行代码'}
+                            {runningCode === index ? '⏳ 运行中...' : '▶️ 运行'}
                           </button>
                           <button
                             onClick={() => handleCopyCode(example.code, index)}
@@ -466,39 +541,6 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                           </button>
                         </div>
                       </div>
-
-                      {/* 输出结果显示 */}
-                      {codeOutputs[index] && (
-                        <div style={{
-                          marginTop: '12px',
-                          background: '#1e1e1e',
-                          borderRadius: '8px',
-                          overflow: 'hidden',
-                          border: '2px solid #4caf50'
-                        }}>
-                          <div style={{
-                            background: '#2d2d2d',
-                            padding: '8px 12px',
-                            fontSize: '12px',
-                            color: '#4caf50',
-                            fontWeight: 600,
-                            borderBottom: '1px solid #3d3d3d'
-                          }}>
-                            📤 输出结果
-                          </div>
-                          <pre style={{
-                            margin: 0,
-                            padding: '16px',
-                            color: '#98c379',
-                            fontFamily: "'Courier New', monospace",
-                            fontSize: '13px',
-                            lineHeight: '1.6',
-                            overflowX: 'auto'
-                          }}>
-                            {codeOutputs[index]}
-                          </pre>
-                        </div>
-                      )}
                       
                       {/* 逐行解释 */}
                       {example.explanation && example.explanation.length > 0 && (
@@ -635,9 +677,136 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                   />
                 ))}
               </div>
+
+              {/* 底部间距，为控制台留出空间 */}
+              <div style={{ height: consoleExpanded ? '300px' : '80px' }}></div>
             </>
           )}
         </div>
+      </div>
+
+      {/* 底部固定输出控制台 */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: '#1e1e1e',
+        borderTop: '3px solid #667eea',
+        zIndex: 1000,
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.3)'
+      }}>
+        {/* 控制台头部 */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '10px 16px',
+          background: '#2d2d2d',
+          borderBottom: '1px solid #3d3d3d'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ color: '#98c379', fontWeight: 600, fontSize: '14px' }}>
+              🖥️ 输出控制台
+            </span>
+            {consoleContent.length > 0 && (
+              <span style={{ color: '#888', fontSize: '12px' }}>
+                {consoleContent.filter(c => c.type === 'output').length} 条输出
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleClearConsole}
+              style={{
+                padding: '6px 12px',
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#ff9800',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 500,
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+            >
+              🗑️ 清空
+            </button>
+            <button
+              onClick={() => setConsoleExpanded(!consoleExpanded)}
+              style={{
+                padding: '6px 12px',
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#d4d4d4',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 500,
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+            >
+              {consoleExpanded ? '收起 ⬇️' : '展开 ⬆️'}
+            </button>
+          </div>
+        </div>
+
+        {/* 控制台内容区域 */}
+        {consoleExpanded && (
+          <div style={{
+            maxHeight: '200px',
+            overflowY: 'auto',
+            padding: '12px 16px',
+            background: '#1e1e1e'
+          }}>
+            {consoleContent.length === 0 ? (
+              <div style={{
+                color: '#666',
+                textAlign: 'center',
+                padding: '20px',
+                fontSize: '13px'
+              }}>
+                点击代码示例的「▶️ 运行」按钮，输出将显示在这里
+              </div>
+            ) : (
+              <div style={{ fontFamily: "'Courier New', monospace", fontSize: '13px', lineHeight: '1.6' }}>
+                {consoleContent.map((entry, idx) => (
+                  <div key={idx} style={{ marginBottom: '4px' }}>
+                    {entry.type === 'command' && (
+                      <span style={{ color: '#61afef' }}>{entry.content}</span>
+                    )}
+                    {entry.type === 'code' && (
+                      <pre style={{
+                        margin: '8px 0',
+                        padding: '8px',
+                        background: '#2d2d2d',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        color: '#d4d4d4',
+                        whiteSpace: 'pre-wrap'
+                      }}>
+                        {entry.content}
+                      </pre>
+                    )}
+                    {entry.type === 'output' && (
+                      <span style={{ color: '#98c379', paddingLeft: '16px' }}>{entry.content}</span>
+                    )}
+                    {entry.type === 'success' && (
+                      <span style={{ color: '#4caf50', fontWeight: 600 }}>{entry.content}</span>
+                    )}
+                    {entry.type === 'separator' && (
+                      <div style={{ color: '#555', margin: '8px 0', fontSize: '12px' }}>{entry.content}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );
