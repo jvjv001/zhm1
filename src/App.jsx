@@ -4,6 +4,7 @@ import { CourseLearning } from './pages/CourseLearning';
 import { Projects } from './pages/Projects';
 import { Quiz } from './pages/Quiz';
 import { Profile } from './pages/Profile';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const [activePage, setActivePage] = useState('course');
@@ -28,12 +29,14 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <Header activePage={activePage} setActivePage={setActivePage} />
-      <main className="main-content">
-        {renderPage()}
-      </main>
-    </div>
+    <ErrorBoundary>
+      <div className="app">
+        <Header activePage={activePage} setActivePage={setActivePage} />
+        <main className="main-content">
+          {renderPage()}
+        </main>
+      </div>
+    </ErrorBoundary>
   );
 }
 
