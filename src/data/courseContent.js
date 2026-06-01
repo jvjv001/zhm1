@@ -249,9 +249,9 @@ print(df.loc[:, ['产品', '销量']])`,
       },
       {
         id: 'q4',
-        text: '填空题：DataFrame的每一行可以看作是一个______（填"字典"或"Series"）',
-        correct: '字典',
-        explanation: 'DataFrame的每行数据在访问时返回的是一个字典-like的对象，包含该行的所有列名和对应值。'
+        text: '填空题：DataFrame的每一行可以看作是一个______（填"Series"）',
+        correct: 'Series',
+        explanation: 'DataFrame的每一行在访问时返回的是一个Series对象，包含该行的所有列名和对应值。'
       },
       {
         id: 'q5',
