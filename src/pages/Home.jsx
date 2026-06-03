@@ -1126,7 +1126,7 @@ const styles = {
     borderRadius: '12px',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    border: '2px solid transparent'
+    border: '1px solid #e0e0e0'
   },
   quizOptionSelected: {
     borderColor: '#667eea',
