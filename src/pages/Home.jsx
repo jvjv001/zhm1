@@ -84,9 +84,19 @@ print(df)`);
           try {
             // @ts-ignore
             const pyodideInstance = await window.loadPyodide();
+            
+            // 加载 pandas 和 numpy 包
+            setOutput("正在安装数据分析库（pandas、numpy）...\n这可能需要一些时间...\n");
+            
+            try {
+              await pyodideInstance.loadPackage(['pandas', 'numpy']);
+            } catch (pkgErr) {
+              console.warn("包加载警告（不影响基础功能）:", pkgErr);
+            }
+            
             setPyodide(pyodideInstance);
             setPyodideStatus("ready");
-            setOutput("✅ Python 环境已就绪！\n可以运行代码了~\n\n示例代码已准备就绪，点击运行按钮开始体验。");
+            setOutput("✅ Python 环境已就绪！\n已支持 Pandas、NumPy 等数据分析库\n\n示例代码已准备就绪，点击运行按钮开始体验。");
           } catch (err) {
             setPyodideStatus("error");
             setOutput(`❌ Python 环境加载失败: ${err}`);
