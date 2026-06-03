@@ -66,28 +66,30 @@ print(f"开始学习 {name}")`);
       title: 'Pandas入门',
       text: 'Pandas中用于创建一维带标签数组的结构是？',
       options: ['DataFrame', 'Series', 'Array', 'List'],
-      correct: 1
+      correct: 1,
+      explanation: 'Series就是Pandas中的一维带标签数组。DataFrame是二维的，Array和List不是Pandas原生结构。'
     },
     {
       id: 2,
-      title: '数据处理',
-      text: '读取CSV文件应该使用哪个函数？',
-      options: ['read_excel()', 'read_csv()', 'read_file()', 'load_csv()'],
-      correct: 1
+      title: 'Python基础',
+      text: '以下哪个是Python中正确的列表定义方式？',
+      options: ['list = [1, 2, 3]', 'list = (1, 2, 3)', 'list = {1, 2, 3}', 'list = <1, 2, 3>'],
+      correct: 0,
+      explanation: '使用方括号 [] 是Python中定义列表的正确方式。()是元组，{}是字典/集合。'
     },
     {
       id: 3,
-      title: '数据筛选',
-      text: '查看数据前3行应该使用哪个方法？',
-      options: ['head(3)', 'tail(3)', 'first(3)', 'top(3)'],
-      correct: 0
+      title: 'DataFrame操作',
+      text: '如何获取DataFrame df的行数和列数？',
+      options: ['df.size()', 'df.shape', 'df.count()', 'df.dimension'],
+      correct: 2,
+      explanation: 'df.shape 返回一个元组 (行数, 列数)，是获取DataFrame维度的正确方式。'
     }
   ];
 
   const handleQuizSubmit = (questionId) => {
     const selectedOption = quizAnswers[questionId];
     if (selectedOption !== undefined && !quizSubmissions.has(questionId)) {
-      alert(`演示模式：你选择了 ${String.fromCharCode(65 + selectedOption)}`);
       const newSubmissions = new Set([...quizSubmissions, questionId]);
       setQuizSubmissions(newSubmissions);
       // 保存到localStorage
@@ -341,6 +343,8 @@ print(f"开始学习 {name}")`);
         <div style={styles.quizContainer}>
           {dailyQuizQuestions.map((question, idx) => {
             const isCompleted = quizSubmissions.has(question.id);
+            const userAnswer = quizAnswers[question.id];
+            const isCorrect = isCompleted && userAnswer === question.correct;
             return (
               <div
                 key={question.id}
@@ -351,34 +355,61 @@ print(f"开始学习 {name}")`);
               >
                 <div style={styles.quizQuestionHeader}>
                   <span style={styles.quizNumber}>
-                    {isCompleted ? '✅' : '⚪'} 第 {idx + 1} 题
+                    {isCompleted ? (isCorrect ? '✅' : '❌') : '⚪'} 第 {idx + 1} 题
                   </span>
                   <span style={styles.quizTopic}>{question.title}</span>
-                  {isCompleted && <span style={styles.quizCompleted}>已完成</span>}
+                  {isCompleted && (
+                    <span style={{
+                      ...styles.quizCompleted,
+                      color: isCorrect ? '#4caf50' : '#f44336'
+                    }}>
+                      {isCorrect ? '已答对' : '已答题'}
+                    </span>
+                  )}
                 </div>
                 <h3 style={styles.quizQuestion}>{question.text}</h3>
                 <div style={styles.quizOptions}>
-                  {question.options.map((option, optIdx) => (
-                    <label
-                      key={optIdx}
-                      style={{
-                        ...styles.quizOption,
-                        ...(quizAnswers[question.id] === optIdx ? styles.quizOptionSelected : {})
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name={`quiz-${question.id}`}
-                        value={optIdx}
-                        checked={quizAnswers[question.id] === optIdx}
-                        onChange={() => handleQuizAnswerChange(question.id, optIdx)}
-                        style={styles.quizRadio}
-                      />
-                      <span style={styles.quizOptionLabel}>
-                        {String.fromCharCode(65 + optIdx)}. {option}
-                      </span>
-                    </label>
-                  ))}
+                  {question.options.map((option, optIdx) => {
+                    let optionStyle = {};
+                    if (isCompleted) {
+                      if (optIdx === question.correct) {
+                        optionStyle = styles.quizOptionCorrect;
+                      } else if (userAnswer === optIdx && optIdx !== question.correct) {
+                        optionStyle = styles.quizOptionWrong;
+                      }
+                    } else if (userAnswer === optIdx) {
+                      optionStyle = styles.quizOptionSelected;
+                    }
+                    
+                    return (
+                      <label
+                        key={optIdx}
+                        style={{
+                          ...styles.quizOption,
+                          ...optionStyle,
+                          ...(isCompleted ? styles.quizOptionDisabled : {})
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name={`quiz-${question.id}`}
+                          value={optIdx}
+                          checked={userAnswer === optIdx}
+                          onChange={() => !isCompleted && handleQuizAnswerChange(question.id, optIdx)}
+                          style={{
+                            ...styles.quizRadio,
+                            ...(isCompleted ? styles.quizRadioDisabled : {})
+                          }}
+                          disabled={isCompleted}
+                        />
+                        <span style={styles.quizOptionLabel}>
+                          {String.fromCharCode(65 + optIdx)}. {option}
+                          {isCompleted && optIdx === question.correct && ' ✓'}
+                          {isCompleted && userAnswer === optIdx && optIdx !== question.correct && ' ✗'}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
                 <button
                   onClick={() => handleQuizSubmit(question.id)}
@@ -387,11 +418,23 @@ print(f"开始学习 {name}")`);
                     ...(isCompleted ? styles.quizSubmitButtonDisabled : {})
                   }}
                   disabled={
-                    quizAnswers[question.id] === undefined || isCompleted
+                    userAnswer === undefined || isCompleted
                   }
                 >
                   {isCompleted ? '已提交' : '提交答案'}
                 </button>
+                {isCompleted && (
+                  <div style={{
+                    ...styles.quizFeedback,
+                    ...(isCorrect ? styles.quizFeedbackCorrect : styles.quizFeedbackWrong)
+                  }}>
+                    {isCorrect ? (
+                      <>✅ 回答正确！{question.explanation}</>
+                    ) : (
+                      <>❌ 回答错误。正确答案是 {String.fromCharCode(65 + question.correct)}（{question.options[question.correct]}）。{question.explanation}</>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -1089,11 +1132,26 @@ const styles = {
     borderColor: '#667eea',
     background: '#f3e5f5'
   },
+  quizOptionCorrect: {
+    borderColor: '#4caf50',
+    background: '#e8f5e9'
+  },
+  quizOptionWrong: {
+    borderColor: '#f44336',
+    background: '#ffebee'
+  },
+  quizOptionDisabled: {
+    cursor: 'not-allowed',
+    opacity: 0.8
+  },
   quizRadio: {
     width: '20px',
     height: '20px',
     cursor: 'pointer',
     accentColor: '#667eea'
+  },
+  quizRadioDisabled: {
+    cursor: 'not-allowed'
   },
   quizOptionLabel: {
     flex: 1,
@@ -1117,6 +1175,23 @@ const styles = {
     background: '#ccc',
     cursor: 'not-allowed',
     opacity: 0.7
+  },
+  quizFeedback: {
+    marginTop: '16px',
+    padding: '14px 18px',
+    borderRadius: '10px',
+    fontSize: '14px',
+    lineHeight: 1.6
+  },
+  quizFeedbackCorrect: {
+    background: '#e8f5e9',
+    color: '#2e7d32',
+    border: '1px solid #a5d6a7'
+  },
+  quizFeedbackWrong: {
+    background: '#ffebee',
+    color: '#c62828',
+    border: '1px solid #ef9a9a'
   },
   // 在线代码运行器样式
   codeRunnerContainer: {
