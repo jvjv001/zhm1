@@ -156,7 +156,10 @@ export const Home = ({ setActivePage }) => {
           {popularProjects.map((project, index) => (
             <div
               key={project.id}
-              onClick={() => setActivePage('projects')}
+              onClick={() => {
+                alert(`你点击了：${project.title}`);
+                setActivePage('projects');
+              }}
               style={styles.projectCard}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-8px) scale(1.02)';
