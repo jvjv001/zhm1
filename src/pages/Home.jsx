@@ -52,13 +52,61 @@ export const Home = ({ setActivePage }) => {
   
   const [quizAnswers, setQuizAnswers] = useState(savedQuizAnswers);
   const [quizSubmissions, setQuizSubmissions] = useState(new Set(savedQuizSubmissions));
-  const [code, setCode] = useState(`print("Hello PandaLearn")
-print("欢迎使用Pandas学习平台")
+  const [code, setCode] = useState(`import pandas as pd
 
-# 这是一个模拟运行演示
-name = "Pandas"
-print(f"开始学习 {name}")`);
+# 创建Series
+s = pd.Series([1, 2, 3, 4, 5])
+print("创建的Series:", s)
+
+# 创建DataFrame
+df = pd.DataFrame({
+    '姓名': ['张三', '李四', '王五'],
+    '年龄': [25, 30, 35]
+})
+print("\\n创建的DataFrame:")
+print(df)`);
   const [output, setOutput] = useState("");
+  const [pyodideStatus, setPyodideStatus] = useState("loading");
+  const [pyodide, setPyodide] = useState(null);
+
+  // 加载Pyodide
+  useEffect(() => {
+    const loadPyodideEngine = async () => {
+      try {
+        setPyodideStatus("loading");
+        setOutput("正在加载 Python 环境，请稍候...\n（首次加载约需5-10秒）\n");
+        
+        const script = document.createElement('script');
+        script.src = "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js";
+        script.async = true;
+        
+        script.onload = async () => {
+          try {
+            // @ts-ignore
+            const pyodideInstance = await window.loadPyodide();
+            setPyodide(pyodideInstance);
+            setPyodideStatus("ready");
+            setOutput("✅ Python 环境已就绪！\n可以运行代码了~\n\n示例代码已准备就绪，点击运行按钮开始体验。");
+          } catch (err) {
+            setPyodideStatus("error");
+            setOutput(`❌ Python 环境加载失败: ${err}`);
+          }
+        };
+        
+        script.onerror = () => {
+          setPyodideStatus("error");
+          setOutput("❌ 无法加载 Pyodide，请检查网络连接。");
+        };
+        
+        document.head.appendChild(script);
+      } catch (err) {
+        setPyodideStatus("error");
+        setOutput(`❌ 初始化失败: ${err}`);
+      }
+    };
+    
+    loadPyodideEngine();
+  }, []);
 
   const dailyQuizQuestions = [
     {
@@ -112,34 +160,35 @@ print(f"开始学习 {name}")`);
     }
   };
 
-  const handleRunCode = () => {
-    let outputText = "";
+  const handleRunCode = async () => {
+    if (pyodideStatus !== "ready") {
+      setOutput("⚠️ Python 环境还在加载中，请稍候...");
+      return;
+    }
     
-    const printRegex = /print\s*\(([\s\S]*?)\)\s*;?\s*(?:\n|$)/g;
-    let match;
+    setOutput("正在执行代码...\n");
     
-    while ((match = printRegex.exec(code)) !== null) {
-      let content = match[1].trim();
+    try {
+      // 使用Pyodide执行代码
+      pyodide.runPython(`
+import sys
+from io import StringIO
+sys.stdout = StringIO()
+`);
       
-      if (content.startsWith('f"') || content.startsWith("f'")) {
-        content = content.slice(2, -1);
-        content = content.replace(/\{(\w+)\}/g, (_, varName) => {
-          const varRegex = new RegExp(`${varName}\\s*=\\s*(["'])(.*?)\\1`, 'g');
-          const varMatch = varRegex.exec(code);
-          return varMatch ? varMatch[2] : `{${varName}}`;
-        });
+      await pyodide.runPythonAsync(code);
+      
+      const stdout = pyodide.runPython("sys.stdout.getvalue()");
+      const result = stdout.trim();
+      
+      if (result) {
+        setOutput(`✅ 执行成功！\n\n${result}`);
       } else {
-        content = content.replace(/^["']|["']$/g, '');
+        setOutput(`✅ 执行成功！\n\n（代码已执行，但没有 print 输出）`);
       }
-      
-      outputText += content + "\n";
+    } catch (err) {
+      setOutput(`❌ 执行出错：\n\n${err.message || err}`);
     }
-    
-    if (outputText === "") {
-      outputText = "(没有检测到 print 语句，请添加 print 来查看输出)";
-    }
-    
-    setOutput(outputText);
   };
 
   // 热门项目数据
@@ -560,7 +609,7 @@ print(f"开始学习 {name}")`);
           </div>
         </div>
         <p style={styles.codeRunnerNote}>
-          ⚠️ 当前为演示模拟运行，实际环境将支持完整 Python
+          ✅ 真实 Python 环境（支持 Pandas、Numpy 等库）
         </p>
       </section>
 
