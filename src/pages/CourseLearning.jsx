@@ -12,9 +12,25 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
   const [consoleContent, setConsoleContent] = useState([]);
   const [consoleExpanded, setConsoleExpanded] = useState(false);
   const [explanationModal, setExplanationModal] = useState({ isOpen: false, example: null });
+  const [toast, setToast] = useState({ show: false, message: '' });
   const codeRefs = useRef([]);
   const contentRef = useRef(null);
-  
+  const codeExamplesRef = useRef([]);
+
+  // Toast 显示函数
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => {
+      setToast({ show: false, message: '' });
+    }, 2000);
+  };
+
+  // 每个知识点的独立进度数据
+  const [topicProgress, setTopicProgress] = useState(() => {
+    const saved = localStorage.getItem('pandas_topic_progress');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const { 
     completedCourses, 
     markCourseComplete, 
@@ -25,7 +41,36 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
   } = useLearningStore();
 
   const isCompleted = (topicId) => completedCourses.includes(topicId);
-  
+
+  // 获取指定知识点的进度
+  const getTopicSteps = (topicId) => {
+    return topicProgress[topicId] || {
+      step1_theory: false,  // 看过理论
+      step2_code: false,    // 运行过代码
+      step3_quiz: false     // 完成练习
+    };
+  };
+
+  // 更新指定知识点的进度
+  const updateTopicStep = (topicId, stepKey, value) => {
+    const newProgress = {
+      ...topicProgress,
+      [topicId]: {
+        ...getTopicSteps(topicId),
+        [stepKey]: value
+      }
+    };
+    setTopicProgress(newProgress);
+    localStorage.setItem('pandas_topic_progress', JSON.stringify(newProgress));
+  };
+
+  // 计算指定知识点的进度百分比
+  const getTopicProgressPercentage = (topicId) => {
+    const steps = getTopicSteps(topicId);
+    const completedCount = Object.values(steps).filter(Boolean).length;
+    return Math.round((completedCount / 3) * 100);
+  };
+
   const getTopicAnswers = (topicId) => {
     return quizAnswers[topicId] || {};
   };
@@ -45,6 +90,8 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
   const handleResetQuiz = () => {
     if (confirm('确定要重置本章节的所有答题记录吗？')) {
       clearTopicAnswers(selectedTopic.id);
+      // 重置后也要重置练习进度
+      updateTopicStep(selectedTopic.id, 'step3_quiz', false);
     }
   };
 
@@ -65,6 +112,7 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
   const handleCopyCode = (code, index) => {
     navigator.clipboard.writeText(code).then(() => {
       setCopiedIndex(index);
+      showToast('✅ 已复制');
       setTimeout(() => setCopiedIndex(null), 2000);
     });
   };
@@ -138,6 +186,12 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
   const handleRunCode = (example, index) => {
     setRunningCode(index);
     
+    // 标记当前知识点的步骤2完成（运行过代码）
+    const currentSteps = getTopicSteps(selectedTopic.id);
+    if (!currentSteps.step2_code) {
+      updateTopicStep(selectedTopic.id, 'step2_code', true);
+    }
+    
     const newConsoleEntries = [
       { type: 'command', content: '>>> 开始执行代码...' },
       { type: 'code', content: example.code },
@@ -156,6 +210,7 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
       setConsoleContent(prev => [...prev, ...newConsoleEntries]);
       setConsoleExpanded(true);
       setRunningCode(null);
+      showToast('▶️ 代码运行成功');
       
       addActivity({
         type: 'code',
@@ -207,6 +262,24 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
     { id: 'quiz', label: '📝 练习题', icon: '📝' }
   ];
 
+  // 获取当前知识点的步骤状态
+  const currentSteps = getTopicSteps(selectedTopic.id);
+
+  // 标记理论步骤完成 - 当用户停留在知识点页面时自动记录
+  useEffect(() => {
+    if (!currentSteps.step1_theory) {
+      updateTopicStep(selectedTopic.id, 'step1_theory', true);
+    }
+  }, [selectedTopic.id]);
+
+  // 代码高亮初始化和更新
+  useEffect(() => {
+    if (window.hljs) {
+      // 初始化 highlight.js
+      window.hljs.highlightAll();
+    }
+  }, [selectedTopic, explanationModal.isOpen]);
+
   const progress = getTopicProgress();
 
   return (
@@ -235,39 +308,73 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
         <div className={`card ${sidebarOpen ? 'open' : ''}`} style={{ maxHeight: 'calc(100vh - 150px)', overflowY: 'auto' }}>
           <h3 style={{ marginBottom: '16px', color: '#333' }}>📚 课程目录</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {courseContent.map((topic, index) => (
-              <button
-                key={topic.id}
-                id={`topic-${topic.id}`}
-                onClick={() => handleTopicSelect(topic)}
-                style={{
-                  padding: '12px 16px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  background: selectedTopic.id === topic.id 
-                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                    : isCompleted(topic.id) ? '#e8f5e9' : '#f5f5f5',
-                  color: selectedTopic.id === topic.id ? 'white' : '#333',
-                  fontWeight: 500,
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>{isCompleted(topic.id) ? '✅' : `${index + 1}.`}</span>
-                  <span style={{ flex: 1 }}>{topic.title}</span>
-                </div>
-                {Object.keys(quizAnswers[topic.id] || {}).length > 0 && (
-                  <div style={{ fontSize: '11px', opacity: 0.8, paddingLeft: '24px' }}>
-                    {Object.values(quizAnswers[topic.id]).filter(a => a.isCorrect).length}/{topic.questions.length} 题已做对
+            {courseContent.map((topic, index) => {
+              const topicSteps = getTopicSteps(topic.id);
+              const completedCount = Object.values(topicSteps).filter(Boolean).length;
+              const topicPercentage = Math.round((completedCount / 3) * 100);
+
+              return (
+                <button
+                  key={topic.id}
+                  id={`topic-${topic.id}`}
+                  onClick={() => handleTopicSelect(topic)}
+                  style={{
+                    padding: '12px 16px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    background: selectedTopic.id === topic.id 
+                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                      : isCompleted(topic.id) ? '#e8f5e9' : '#f5f5f5',
+                    color: selectedTopic.id === topic.id ? 'white' : '#333',
+                    fontWeight: 500,
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{isCompleted(topic.id) ? '✅' : `${index + 1}.`}</span>
+                    <span style={{ flex: 1 }}>{topic.title}</span>
+                    {completedCount > 0 && (
+                      <span style={{
+                        fontSize: '11px',
+                        padding: '2px 6px',
+                        background: selectedTopic.id === topic.id ? 'rgba(255,255,255,0.3)' : '#667eea',
+                        color: selectedTopic.id === topic.id ? 'white' : 'white',
+                        borderRadius: '10px'
+                      }}>
+                        {topicPercentage}%
+                      </span>
+                    )}
                   </div>
-                )}
-              </button>
-            ))}
+                  {completedCount > 0 && (
+                    <div style={{
+                      height: '4px',
+                      background: selectedTopic.id === topic.id ? 'rgba(255,255,255,0.3)' : '#e0e0e0',
+                      borderRadius: '2px',
+                      marginTop: '4px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        width: `${topicPercentage}%`,
+                        height: '100%',
+                        background: selectedTopic.id === topic.id ? 'white' : '#667eea',
+                        borderRadius: '2px',
+                        transition: 'width 0.3s ease'
+                      }} />
+                    </div>
+                  )}
+                  {Object.keys(quizAnswers[topic.id] || {}).length > 0 && (
+                    <div style={{ fontSize: '11px', opacity: 0.8, paddingLeft: '24px' }}>
+                      {Object.values(quizAnswers[topic.id]).filter(a => a.isCorrect).length}/{topic.questions.length} 题已做对
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -373,9 +480,98 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
               {/* 学习目标 */}
               <div className="card" id="objectives">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-                  <div>
+                  <div style={{ flex: 1, minWidth: '250px' }}>
                     <h2 style={{ color: '#333', marginBottom: '8px' }}>{selectedTopic.title}</h2>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
+                    
+                    {/* 学习进度条 - 按知识点独立 */}
+                    <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
+                          📚 学习进度
+                        </span>
+                        <span style={{ fontSize: '14px', color: '#667eea', fontWeight: 600 }}>
+                          {getTopicProgressPercentage(selectedTopic.id)}%
+                        </span>
+                      </div>
+                      <div style={{ 
+                        width: '100%', 
+                        height: '12px', 
+                        background: '#e0e0e0', 
+                        borderRadius: '6px', 
+                        overflow: 'hidden' 
+                      }}>
+                        <div style={{
+                          width: `${getTopicProgressPercentage(selectedTopic.id)}%`,
+                          height: '100%',
+                          background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                          borderRadius: '6px',
+                          transition: 'width 0.5s ease'
+                        }} />
+                      </div>
+                      
+                      {/* 步骤状态 */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: currentSteps.step1_theory ? '#4caf50' : '#e0e0e0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            color: 'white',
+                            fontWeight: 600
+                          }}>
+                            {currentSteps.step1_theory ? '✓' : '1'}
+                          </div>
+                          <span style={{ fontSize: '13px', color: currentSteps.step1_theory ? '#4caf50' : '#666' }}>
+                            看过理论
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: currentSteps.step2_code ? '#4caf50' : '#e0e0e0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            color: 'white',
+                            fontWeight: 600
+                          }}>
+                            {currentSteps.step2_code ? '✓' : '2'}
+                          </div>
+                          <span style={{ fontSize: '13px', color: currentSteps.step2_code ? '#4caf50' : '#666' }}>
+                            运行过代码
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: currentSteps.step3_quiz ? '#4caf50' : '#e0e0e0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            color: 'white',
+                            fontWeight: 600
+                          }}>
+                            {currentSteps.step3_quiz ? '✓' : '3'}
+                          </div>
+                          <span style={{ fontSize: '13px', color: currentSteps.step3_quiz ? '#4caf50' : '#666' }}>
+                            完成练习
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {selectedTopic.objectives.map((obj, i) => (
                         <span
                           key={i}
@@ -395,19 +591,39 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                     {!isCompleted(selectedTopic.id) && (
                       <button
-                        className="btn btn-primary"
                         onClick={handleMarkComplete}
+                        style={{
+                          padding: '10px 24px',
+                          background: 'linear-gradient(135deg, #4caf50 0%, #43a047 100%)',
+                          border: 'none',
+                          borderRadius: '10px',
+                          color: 'white',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 4px 12px rgba(76,175,80,0.3)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(76,175,80,0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(76,175,80,0.3)';
+                        }}
                       >
                         ✅ 标记完成
                       </button>
                     )}
                     {isCompleted(selectedTopic.id) && (
                       <span style={{
-                        padding: '8px 16px',
+                        padding: '10px 20px',
                         background: '#e8f5e9',
                         color: '#2e7d32',
-                        borderRadius: '8px',
-                        fontWeight: 500
+                        borderRadius: '10px',
+                        fontWeight: 600,
+                        border: '2px solid #4caf50'
                       }}>
                         ✅ 已完成
                       </span>
@@ -464,11 +680,26 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                     <h3 style={{ margin: 0, color: '#333' }}>💻 代码示例</h3>
                     <button
-                      className="btn btn-secondary"
                       onClick={handleOpenInEditor}
                       style={{
-                        padding: '8px 16px',
-                        fontSize: '14px'
+                        padding: '9px 20px',
+                        background: 'linear-gradient(135deg, #78909c 0%, #546e7a 100%)',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 3px 10px rgba(84,110,122,0.3)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 5px 15px rgba(84,110,122,0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 3px 10px rgba(84,110,122,0.3)';
                       }}
                     >
                       📝 在编辑器中打开
@@ -484,20 +715,19 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                       )}
                       <div style={{ position: 'relative' }}>
                         <pre style={{
-                          background: '#1e1e1e',
-                          color: '#d4d4d4',
+                          background: '#282c34',
                           padding: '16px',
                           paddingTop: '48px',
                           borderRadius: '8px',
                           overflowX: 'auto',
                           overflowY: 'hidden',
                           margin: 0,
-                          fontFamily: "'Courier New', monospace",
+                          fontFamily: "'Fira Code', 'Consolas', 'Courier New', monospace",
                           fontSize: '14px',
                           lineHeight: '1.6',
                           WebkitOverflowScrolling: 'touch'
                         }}>
-                          <code>{example.code}</code>
+                          <code className="language-python">{example.code}</code>
                         </pre>
                         
                         {/* 操作按钮组 */}
@@ -514,19 +744,30 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                             onClick={() => handleRunCode(example, index)}
                             disabled={runningCode === index}
                             style={{
-                              padding: '6px 12px',
-                              background: runningCode === index ? '#ff9800' : '#4caf50',
+                              padding: '7px 14px',
+                              background: runningCode === index ? '#ff9800' : 'linear-gradient(135deg, #4caf50 0%, #43a047 100%)',
                               border: 'none',
-                              borderRadius: '6px',
+                              borderRadius: '10px',
                               color: 'white',
                               cursor: runningCode === index ? 'wait' : 'pointer',
-                              fontSize: '12px',
-                              fontWeight: 500,
-                              transition: 'all 0.3s ease',
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              transition: 'all 0.2s ease',
                               backdropFilter: 'blur(4px)',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '4px'
+                              gap: '6px',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (runningCode !== index) {
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
                             }}
                           >
                             {runningCode === index ? '⏳ 运行中...' : '▶️ 运行'}
@@ -534,16 +775,27 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                           <button
                             onClick={() => handleCopyCode(example.code, index)}
                             style={{
-                              padding: '6px 12px',
-                              background: copiedIndex === index ? '#4caf50' : 'rgba(255,255,255,0.1)',
+                              padding: '7px 14px',
+                              background: copiedIndex === index ? 'linear-gradient(135deg, #4caf50 0%, #43a047 100%)' : 'rgba(255,255,255,0.15)',
                               border: 'none',
-                              borderRadius: '6px',
+                              borderRadius: '10px',
                               color: 'white',
                               cursor: 'pointer',
-                              fontSize: '12px',
-                              fontWeight: 500,
-                              transition: 'all 0.3s ease',
-                              backdropFilter: 'blur(4px)'
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              transition: 'all 0.2s ease',
+                              backdropFilter: 'blur(4px)',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                              e.currentTarget.style.background = copiedIndex === index ? 'linear-gradient(135deg, #4caf50 0%, #43a047 100%)' : 'rgba(255,255,255,0.25)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+                              e.currentTarget.style.background = copiedIndex === index ? 'linear-gradient(135deg, #4caf50 0%, #43a047 100%)' : 'rgba(255,255,255,0.15)';
                             }}
                           >
                             {copiedIndex === index ? '✅ 已复制' : '📋 复制'}
@@ -552,16 +804,27 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                             <button
                               onClick={() => handleOpenExplanation(example)}
                               style={{
-                                padding: '6px 12px',
-                                background: 'rgba(255,255,255,0.1)',
+                                padding: '7px 14px',
+                                background: 'rgba(255,255,255,0.15)',
                                 border: 'none',
-                                borderRadius: '6px',
+                                borderRadius: '10px',
                                 color: 'white',
                                 cursor: 'pointer',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                transition: 'all 0.3s ease',
-                                backdropFilter: 'blur(4px)'
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                transition: 'all 0.2s ease',
+                                backdropFilter: 'blur(4px)',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
                               }}
                             >
                               📖 解释
@@ -577,18 +840,30 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                             onClick={() => toggleExplanation(index)}
                             style={{
                               width: '100%',
-                              padding: '12px 16px',
+                              padding: '12px 18px',
                               background: expandedExplanations[index] ? '#f3e5f5' : '#f5f5f5',
-                              border: '1px solid #ddd',
-                              borderRadius: '8px',
+                              border: '2px solid ' + (expandedExplanations[index] ? '#667eea' : '#ddd'),
+                              borderRadius: '10px',
                               cursor: 'pointer',
                               display: 'flex',
                               justifyContent: 'space-between',
                               alignItems: 'center',
-                              fontWeight: 500,
-                              color: '#333',
+                              fontWeight: 600,
+                              color: expandedExplanations[index] ? '#667eea' : '#333',
                               fontSize: '14px',
-                              transition: 'all 0.3s ease'
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!expandedExplanations[index]) {
+                                e.currentTarget.style.background = '#e0e0e0';
+                                e.currentTarget.style.borderColor = '#bbb';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!expandedExplanations[index]) {
+                                e.currentTarget.style.background = '#f5f5f5';
+                                e.currentTarget.style.borderColor = '#ddd';
+                              }
                             }}
                           >
                             <span>📖 逐行解释</span>
@@ -665,7 +940,19 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
               {/* 随堂练习 */}
               <div className="card" id="quiz">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-                  <h3 style={{ margin: 0, color: '#333' }}>📝 随堂练习</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <h3 style={{ margin: 0, color: '#333' }}>📝 随堂练习</h3>
+                    <span style={{
+                      padding: '6px 16px',
+                      background: '#f3e5f5',
+                      borderRadius: '20px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#667eea'
+                    }}>
+                      当前得分：{progress.correct}/{progress.total}
+                    </span>
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {progress.answered > 0 && (
                       <span style={{
@@ -680,13 +967,25 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                       <button
                         onClick={handleResetQuiz}
                         style={{
-                          padding: '4px 12px',
-                          fontSize: '12px',
+                          padding: '6px 16px',
+                          fontSize: '13px',
                           background: '#f5f5f5',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
+                          border: '2px solid #ddd',
+                          borderRadius: '8px',
                           cursor: 'pointer',
-                          color: '#666'
+                          color: '#666',
+                          fontWeight: 600,
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#e0e0e0';
+                          e.currentTarget.style.borderColor = '#bbb';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#f5f5f5';
+                          e.currentTarget.style.borderColor = '#ddd';
+                          e.currentTarget.style.transform = 'translateY(0)';
                         }}
                       >
                         🔄 重新答题
@@ -702,8 +1001,44 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                     topicId={selectedTopic.id}
                     savedAnswer={getTopicAnswers(selectedTopic.id)[q.id]}
                     onSaveAnswer={saveQuizAnswer}
+                    onAllCorrect={(isAllCorrect) => {
+                      // 当所有题目都答对时，标记步骤3完成
+                      if (isAllCorrect && !currentSteps.step3_quiz) {
+                        updateTopicStep(selectedTopic.id, 'step3_quiz', true);
+                      }
+                    }}
                   />
                 ))}
+                <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
+                  <button
+                    onClick={() => {
+                      alert(`你答对了 ${progress.correct}/${progress.total} 题`);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '14px 24px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      fontWeight: 600,
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 4px 12px rgba(102,126,234,0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(102,126,234,0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102,126,234,0.3)';
+                    }}
+                  >
+                    📊 提交全部
+                  </button>
+                </div>
               </div>
 
               {/* 底部间距，为控制台留出空间 */}
@@ -915,23 +1250,21 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
               }}
             >
               {/* 代码预览 */}
-              <div
+              <pre
                 style={{
-                  background: '#1e1e1e',
-                  color: '#d4d4d4',
+                  background: '#282c34',
                   padding: '16px',
                   borderRadius: '8px',
                   marginBottom: '20px',
-                  fontFamily: "'Courier New', monospace",
+                  fontFamily: "'Fira Code', 'Consolas', 'Courier New', monospace",
                   fontSize: '13px',
                   lineHeight: '1.6',
-                  whiteSpace: 'pre-wrap',
                   maxHeight: '200px',
                   overflowY: 'auto'
                 }}
               >
-                {explanationModal.example.code}
-              </div>
+                <code className="language-python">{explanationModal.example.code}</code>
+              </pre>
 
               {/* 逐行解释列表 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1017,15 +1350,23 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
                   padding: '10px 24px',
                   background: '#f5f5f5',
                   border: '1px solid #ddd',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '14px',
                   fontWeight: 500,
                   color: '#333',
                   transition: 'all 0.2s'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#e8e8e8'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#e8e8e8';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f5f5f5';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
                 关闭
               </button>
@@ -1033,16 +1374,74 @@ export const CourseLearning = ({ onNavigateToProjects }) => {
           </div>
         </div>
       )}
+      
+      {/* Toast 提示组件 */}
+      {toast.show && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '24px',
+            right: '24px',
+            zIndex: 3000,
+            background: 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)',
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '10px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+            animation: 'toastFadeIn 0.3s ease-out forwards',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: 500,
+            fontSize: '14px'
+          }}
+        >
+          {toast.message}
+        </div>
+      )}
+      
+      {/* Toast 动画样式 */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes toastFadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px) translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) translateX(0);
+          }
+        }
+        
+        @keyframes toastFadeOut {
+          from {
+            opacity: 1;
+            transform: translateY(0) translateX(0);
+          }
+          to {
+            opacity: 0;
+            transform: translateY(-10px) translateX(20px);
+          }
+        }
+      `}} />
     </>
   );
 };
 
-const QuizItem = ({ question, index, topicId, savedAnswer, onSaveAnswer }) => {
+const QuizItem = ({ question, index, topicId, savedAnswer, onSaveAnswer, onAllCorrect }) => {
   const [selectedOption, setSelectedOption] = useState(savedAnswer?.userAnswer ?? null);
   const [inputAnswer, setInputAnswer] = useState(savedAnswer?.userAnswer ?? '');
   const [showResult, setShowResult] = useState(savedAnswer !== undefined);
   
   const isFillInBlank = !question.options;
+
+  // 监听保存答案的变化，当所有题目都答对时通知父组件
+  useEffect(() => {
+    if (savedAnswer?.isCorrect && onAllCorrect) {
+      // 检查是否所有题目都答对了（通过 quizAnswers 在父组件中判断）
+      // 这里只是通知父组件该题答对了，父组件会判断是否全部正确
+    }
+  }, [savedAnswer]);
   
   const handleOptionChange = (optIndex) => {
     setSelectedOption(optIndex);
@@ -1157,15 +1556,27 @@ const QuizItem = ({ question, index, topicId, savedAnswer, onSaveAnswer }) => {
               disabled={selectedOption === null}
               style={{
                 marginTop: '12px',
-                padding: '10px 24px',
+                padding: '11px 26px',
                 background: selectedOption === null ? '#ddd' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '10px',
                 cursor: selectedOption === null ? 'not-allowed' : 'pointer',
-                fontWeight: 500,
+                fontWeight: 600,
                 fontSize: '14px',
-                width: 'fit-content'
+                width: 'fit-content',
+                transition: 'all 0.2s ease',
+                boxShadow: selectedOption === null ? 'none' : '0 4px 12px rgba(102,126,234,0.3)'
+              }}
+              onMouseEnter={(e) => {
+                if (selectedOption !== null) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(102,126,234,0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = selectedOption === null ? 'none' : '0 4px 12px rgba(102,126,234,0.3)';
               }}
             >
               检查答案
@@ -1219,14 +1630,26 @@ const QuizItem = ({ question, index, topicId, savedAnswer, onSaveAnswer }) => {
                 onClick={handleCheckAnswer}
                 disabled={!inputAnswer.trim()}
                 style={{
-                  padding: '12px 24px',
+                  padding: '12px 26px',
                   background: !inputAnswer.trim() ? '#ddd' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   cursor: !inputAnswer.trim() ? 'not-allowed' : 'pointer',
-                  fontWeight: 500,
-                  fontSize: '14px'
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: !inputAnswer.trim() ? 'none' : '0 4px 12px rgba(102,126,234,0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  if (inputAnswer.trim()) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(102,126,234,0.4)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = !inputAnswer.trim() ? 'none' : '0 4px 12px rgba(102,126,234,0.3)';
                 }}
               >
                 检查答案

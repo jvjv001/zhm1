@@ -16,19 +16,24 @@ export const Projects = () => {
 
   useEffect(() => {
     const initPyodide = async () => {
-      if (!pyodideRef.current && !pyodideLoading) {
+      if (!pyodideRef.current && !pyodideLoading && window.loadPyodide) {
         setPyodideLoading(true);
         try {
-          if (window.loadPyodide) {
-            pyodideRef.current = await window.loadPyodide({
-              indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
-            });
-            setPyodideReady(true);
-            console.log('Pyodide ready');
-          }
+          console.log('正在加载 Pyodide...');
+          pyodideRef.current = await window.loadPyodide({
+            indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/'
+          });
+          // 初始化标准输出捕获
+          await pyodideRef.current.runPythonAsync(`
+import sys
+from io import StringIO
+          `);
+          setPyodideReady(true);
+          console.log('Pyodide 加载完成!');
         } catch (error) {
-          console.error('Failed to load Pyodide:', error);
+          console.error('Pyodide 加载失败:', error);
           setPyodideLoading(false);
+          setOutput(`⚠️ Pyodide 加载失败: ${error.message}\n请刷新页面重试。`);
         }
       }
     };
@@ -38,32 +43,101 @@ export const Projects = () => {
 
   useEffect(() => {
     if (selectedTask) {
-      setUserCode(selectedTask.code);
+      setUserCode(selectedTask.codeTemplate || '');
       setShowAnswer(false);
       setOutput('');
     }
   }, [selectedTask]);
 
   const runCode = async () => {
-    if (!pyodideReady || isRunning) return;
+    if (!pyodideReady || isRunning) {
+      if (!pyodideReady) {
+        setOutput('⚠️ Pyodide 还未加载完成，请稍候...');
+      }
+      return;
+    }
 
     setIsRunning(true);
-    setOutput('正在运行...\n');
+    setOutput('🚀 正在运行代码...\n');
 
     try {
-      pyodideRef.current.runPython(`
+      // 每次运行前重置输出捕获
+      await pyodideRef.current.runPythonAsync(`
 import sys
 from io import StringIO
 sys.stdout = StringIO()
       `);
 
+      // 执行用户代码
       await pyodideRef.current.runPythonAsync(userCode);
 
-      const result = pyodideRef.current.runPython('sys.stdout.getvalue()');
-      setOutput(result || '代码执行完成，无输出');
+      // 获取输出结果
+      const result = await pyodideRef.current.runPythonAsync('sys.stdout.getvalue()');
+      if (result) {
+        setOutput(result);
+      } else {
+        setOutput('✅ 代码执行完成，无输出');
+      }
 
     } catch (error) {
-      setOutput(`错误: ${error.message}`);
+      console.error('代码执行错误:', error);
+      let errorMsg = '';
+
+      // 尝试解析 Python 错误信息
+      const errorStr = String(error.message || error);
+      const pythonErrorMatch = errorStr.match(/File "<exec>", line (\d+)/);
+
+      if (pythonErrorMatch) {
+        // 提取行号
+        const lineNum = pythonErrorMatch[1];
+        // 尝试提取错误类型和描述
+        const lines = errorStr.split('\n');
+        let errorType = 'Error';
+        let errorDesc = errorStr;
+
+        // 查找错误类型
+        for (const line of lines) {
+          if (line.includes('NameError')) {
+            errorType = 'NameError';
+            break;
+          } else if (line.includes('SyntaxError')) {
+            errorType = 'SyntaxError';
+            break;
+          } else if (line.includes('TypeError')) {
+            errorType = 'TypeError';
+            break;
+          } else if (line.includes('IndentationError')) {
+            errorType = 'IndentationError';
+            break;
+          } else if (line.includes('IndexError')) {
+            errorType = 'IndexError';
+            break;
+          } else if (line.includes('KeyError')) {
+            errorType = 'KeyError';
+            break;
+          }
+        }
+
+        // 清理错误消息，保留关键信息
+        errorDesc = lines.filter(l => l.trim()).slice(-3).join('\n');
+
+        errorMsg = `❌ ${errorType}\n`;
+        errorMsg += `📍 位置: 第 ${lineNum} 行\n`;
+        errorMsg += `📋 详情:\n${errorDesc}`;
+      } else if (error.name === 'PythonError') {
+        // 对于其他 Python 错误，尝试格式化
+        const lines = errorStr.split('\n').filter(l => l.trim());
+        if (lines.length > 0) {
+          errorMsg = `❌ Python 错误\n`;
+          errorMsg += `📋 详情:\n${lines.slice(-5).join('\n')}`;
+        } else {
+          errorMsg = `❌ 错误: ${errorStr}`;
+        }
+      } else {
+        errorMsg = `❌ ${error.name || 'Unknown Error'}: ${error.message || errorStr}`;
+      }
+
+      setOutput(errorMsg);
     } finally {
       setIsRunning(false);
     }
@@ -71,16 +145,11 @@ sys.stdout = StringIO()
 
   const handleShowAnswer = () => {
     setShowAnswer(!showAnswer);
-    if (!showAnswer) {
-      setUserCode(selectedTask.answer);
-    } else {
-      setUserCode(selectedTask.code);
-    }
   };
 
   const handleReset = () => {
     if (confirm('确定要重置代码吗？您的更改将丢失。')) {
-      setUserCode(selectedTask.code);
+      setUserCode(selectedTask.codeTemplate || '');
       setShowAnswer(false);
       setOutput('');
     }
@@ -89,7 +158,7 @@ sys.stdout = StringIO()
   const handleMarkComplete = () => {
     if (selectedProject && !completedProjects.includes(selectedProject.id)) {
       markProjectComplete(selectedProject.id);
-      alert('🎉 恭喜完成项目！');
+      alert('🎉 恭喜完成项目!');
     }
   };
 
@@ -253,6 +322,7 @@ sys.stdout = StringIO()
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {selectedTask && (
                 <>
+                  {/* 任务目标 */}
                   <div className="card">
                     <h3 style={{ marginBottom: '12px', color: '#333' }}>{selectedTask.title}</h3>
                     
@@ -261,32 +331,85 @@ sys.stdout = StringIO()
                       <p style={{ color: '#666', lineHeight: 1.6 }}>{selectedTask.objective}</p>
                     </div>
 
-                    <div style={{ marginBottom: '16px' }}>
-                      <h4 style={{ marginBottom: '8px', color: '#555' }}>💡 知识点提示</h4>
-                      <p style={{ color: '#666' }}>{selectedTask.hint}</p>
-                    </div>
-
-                    <div style={{ marginBottom: '16px' }}>
-                      <h4 style={{ marginBottom: '8px', color: '#555' }}>📝 详细步骤</h4>
-                      <ol style={{ marginLeft: '20px', color: '#666' }}>
-                        {selectedTask.steps.map((step, i) => (
-                          <li key={i} style={{ marginBottom: '8px', lineHeight: 1.6 }}>{step}</li>
-                        ))}
-                      </ol>
-                    </div>
-
-                    <div>
-                      <h4 style={{ marginBottom: '8px', color: '#555' }}>📊 预期输出</h4>
-                      <div style={{
-                        padding: '12px 16px',
-                        background: '#f0f9ff',
-                        borderRadius: '8px',
-                        borderLeft: '4px solid #667eea',
-                        color: '#006064'
-                      }}>
-                        {selectedTask.expected}
+                    {/* 知识点提示 */}
+                    {selectedTask.knowledgePoints && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <h4 style={{ marginBottom: '8px', color: '#555' }}>💡 知识点提示</h4>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                          {selectedTask.knowledgePoints.map((kp, idx) => (
+                            <div key={idx} style={{
+                              padding: '8px 12px',
+                              background: '#e3f2fd',
+                              borderRadius: '6px',
+                              border: '1px solid #90caf9',
+                              fontSize: '13px'
+                            }}>
+                              <code style={{ color: '#1565c0', fontWeight: 600 }}>{kp.name}</code>
+                              <span style={{ color: '#424242', marginLeft: '6px' }}> - {kp.desc}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* 详细步骤 */}
+                    {selectedTask.detailedSteps && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <h4 style={{ marginBottom: '8px', color: '#555' }}>📝 详细步骤</h4>
+                        {selectedTask.detailedSteps.map((step, idx) => (
+                          <div key={idx} style={{
+                            marginBottom: '12px',
+                            padding: '12px',
+                            background: '#fafafa',
+                            borderRadius: '8px',
+                            borderLeft: '3px solid #667eea'
+                          }}>
+                            <div style={{ fontWeight: 600, color: '#333', marginBottom: '6px' }}>
+                              {step.stepTitle}
+                            </div>
+                            <p style={{ color: '#666', marginBottom: '8px', lineHeight: 1.6 }}>
+                              <strong>这一步要做什么：</strong>{step.action}
+                            </p>
+                            {step.code && (
+                              <div style={{
+                                background: '#1e1e1e',
+                                color: '#d4d4d4',
+                                padding: '12px',
+                                borderRadius: '6px',
+                                fontFamily: "'Courier New', monospace",
+                                fontSize: '13px',
+                                overflowX: 'auto',
+                                marginBottom: '8px'
+                              }}>
+                                <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{step.code}</pre>
+                              </div>
+                            )}
+                            <p style={{ color: '#555', fontSize: '13px', fontStyle: 'italic' }}>
+                              💬 {step.explanation}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 预期输出 */}
+                    {selectedTask.expectedOutput && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <h4 style={{ marginBottom: '8px', color: '#555' }}>📊 预期输出</h4>
+                        <div style={{
+                          padding: '12px 16px',
+                          background: '#f0f9ff',
+                          borderRadius: '8px',
+                          borderLeft: '4px solid #667eea',
+                          color: '#006064',
+                          fontFamily: "'Courier New', monospace",
+                          fontSize: '13px',
+                          overflowX: 'auto'
+                        }}>
+                          <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{selectedTask.expectedOutput}</pre>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* 代码编辑器 */}
@@ -314,8 +437,8 @@ sys.stdout = StringIO()
                         fontFamily: "'Courier New', monospace",
                         fontSize: '14px',
                         resize: 'vertical',
-                        background: showAnswer ? '#f0fff4' : '#1e1e1e',
-                        color: showAnswer ? '#2e7d32' : '#d4d4d4',
+                        background: '#1e1e1e',
+                        color: '#d4d4d4',
                         lineHeight: 1.5
                       }}
                       readOnly={showAnswer}
@@ -337,7 +460,7 @@ sys.stdout = StringIO()
                         className="btn btn-secondary"
                         onClick={handleShowAnswer}
                       >
-                        {showAnswer ? '👀 我的代码' : '💡 查看答案'}
+                        💡 查看预期输出
                       </button>
                       <button
                         className="btn btn-secondary"
@@ -359,39 +482,74 @@ sys.stdout = StringIO()
                           borderRadius: '8px',
                           border: '1px solid #ddd',
                           fontFamily: "'Courier New', monospace",
-                          fontSize: '14px',
+                          fontSize: '13px',
                           whiteSpace: 'pre-wrap',
                           wordBreak: 'break-word',
                           maxHeight: '300px',
                           overflowY: 'auto',
-                          color: output.includes('错误') ? '#c62828' : '#333'
+                          color: output.includes('错误') || output.includes('❌') ? '#c62828' : '#333'
                         }}>
                           {output}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 显示预期输出作为答案 */}
+                    {showAnswer && selectedTask.expectedOutput && (
+                      <div style={{ marginTop: '16px' }}>
+                        <h4 style={{ marginBottom: '8px', color: '#333' }}>✅ 预期输出 (参考)</h4>
+                        <div style={{
+                          padding: '16px',
+                          background: '#e8f5e9',
+                          borderRadius: '8px',
+                          border: '1px solid #81c784',
+                          fontFamily: "'Courier New', monospace",
+                          fontSize: '13px',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          color: '#2e7d32'
+                        }}>
+                          {selectedTask.expectedOutput}
                         </div>
                       </div>
                     )}
                   </div>
 
                   {/* 常见错误 */}
-                  <div className="card">
-                    <h4 style={{ marginBottom: '12px', color: '#333' }}>⚠️ 常见错误</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {selectedTask.commonErrors.map((error, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            padding: '12px',
-                            background: '#fff3e0',
-                            borderRadius: '8px',
-                            borderLeft: '4px solid #ff9800',
-                            color: '#e65100'
-                          }}
-                        >
-                          {error}
-                        </div>
-                      ))}
+                  {selectedTask.commonErrors && (
+                    <div className="card">
+                      <h4 style={{ marginBottom: '12px', color: '#333' }}>⚠️ 常见错误</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {selectedTask.commonErrors.map((error, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              padding: '12px',
+                              background: '#fff3e0',
+                              borderRadius: '8px',
+                              borderLeft: '4px solid #ff9800',
+                              color: '#e65100'
+                            }}
+                          >
+                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>❌ {error.error}</div>
+                            <div style={{ fontSize: '13px' }}>✅ 解决方法：{error.solution}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* 小提示 */}
+                  {selectedTask.tips && (
+                    <div className="card">
+                      <h4 style={{ marginBottom: '12px', color: '#333' }}>💡 小提示</h4>
+                      <ul style={{ marginLeft: '20px', color: '#666' }}>
+                        {selectedTask.tips.map((tip, idx) => (
+                          <li key={idx} style={{ marginBottom: '6px', lineHeight: 1.6 }}>{tip}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </>
               )}
             </div>

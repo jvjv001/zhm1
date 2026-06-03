@@ -249,15 +249,17 @@ print(df.loc[:, ['产品', '销量']])`,
       },
       {
         id: 'q4',
-        text: '填空题：DataFrame的每一行可以看作是一个______（填"Series"）',
-        correct: 'Series',
-        explanation: 'DataFrame的每一行在访问时返回的是一个Series对象，包含该行的所有列名和对应值。'
+        text: 'DataFrame的每一行在访问时返回什么类型的对象？',
+        options: ['A. List', 'B. Series', 'C. DataFrame', 'D. Dictionary'],
+        correct: 1,
+        explanation: 'DataFrame的每一行在访问时返回的是一个Series对象，包含该行的所有列名和对应值。Series索引即为DataFrame的列名。'
       },
       {
         id: 'q5',
-        text: '填空题：使用______参数可以为DataFrame指定自定义索引（填"index"）',
-        correct: 'index',
-        explanation: '在创建DataFrame时，通过index参数可以指定自定义行索引，如df = pd.DataFrame(data, index=[...])。'
+        text: '创建DataFrame时，如何指定自定义行索引？',
+        options: ['A. 使用columns参数', 'B. 使用index参数', 'C. 使用row参数', 'D. 无法指定，只能使用默认0,1,2索引'],
+        correct: 1,
+        explanation: '在创建DataFrame时，通过index参数可以指定自定义行索引，如df = pd.DataFrame(data, index=["一","二","三"])。columns参数用于指定列名。'
       }
     ]
   },
@@ -359,15 +361,17 @@ print("\\n文件已保存为 output.xlsx")`,
       },
       {
         id: 'q4',
-        text: '填空题：读取.xlsx格式的Excel文件需要安装______库（填"openpyxl"）',
-        correct: 'openpyxl',
-        explanation: 'openpyxl是Pandas读取和写入.xlsx格式Excel文件的默认引擎，需要单独安装。'
+        text: '读取.xlsx格式的Excel文件时，默认使用哪个引擎？',
+        options: ['A. xlrd', 'B. openpyxl', 'C. pandas', 'D. xlsxwriter'],
+        correct: 1,
+        explanation: 'openpyxl是Pandas读取和写入.xlsx格式Excel文件的默认引擎，需要单独安装。xlrd用于读取旧版.xls文件。'
       },
       {
         id: 'q5',
-        text: '填空题：使用pd.read_csv()读取文件时，如果文件编码不是UTF-8，需要通过______参数指定编码（填"encoding"）',
-        correct: 'encoding',
-        explanation: 'encoding参数用于指定文件编码，常见的有utf-8、gbk、gb2312等，中文文件常用gbk编码。'
+        text: '使用pd.read_csv()读取包含中文的文件时，最常用的编码参数是？',
+        options: ['A. gbk 或 utf-8', 'B. ascii', 'C. latin-1', 'D. unicode'],
+        correct: 0,
+        explanation: 'encoding参数用于指定文件编码，中文数据常用gbk或utf-8编码。gbk是Windows中文系统默认编码，utf-8是跨平台通用编码。'
       }
     ]
   },
@@ -488,15 +492,17 @@ print(df.loc[:, ['产品', '销量']])`,
       },
       {
         id: 'q4',
-        text: '填空题：iloc基于______位置索引，而loc基于标签索引（填"整数"）',
-        correct: '整数',
-        explanation: 'iloc使用整数位置（0, 1, 2...）来选择数据，而loc使用行标签（如"a", "b"或日期索引）。'
+        text: 'iloc使用什么进行数据选择？',
+        options: ['A. 列名', 'B. 整数位置索引', 'C. 行标签', 'D. 布尔值'],
+        correct: 1,
+        explanation: 'iloc使用整数位置（0, 1, 2...）来选择数据，类似于Python列表的索引方式，而loc使用行/列标签。'
       },
       {
         id: 'q5',
-        text: '填空题：布尔索引返回的是一个由______值组成的Series（填"True/False"或"布尔"）',
-        correct: 'True/False',
-        explanation: '布尔索引创建的条件表达式返回布尔Series，True表示满足条件，False表示不满足。'
+        text: '布尔索引返回的Series包含什么类型的值？',
+        options: ['A. 整数', 'B. 字符串', 'C. True/False布尔值', 'D. 浮点数'],
+        correct: 2,
+        explanation: '布尔索引创建的条件表达式返回布尔Series，True表示满足条件的行，False表示不满足的行。这些布尔值用于过滤DataFrame。'
       }
     ]
   },
@@ -628,15 +634,17 @@ print(outliers)`,
       },
       {
         id: 'q4',
-        text: '填空题：检测DataFrame中缺失值的函数是______（填"isnull"）',
-        correct: 'isnull',
-        explanation: 'isnull()函数返回布尔DataFrame，标识每个位置是否为缺失值（NaN或None）。'
+        text: '检测DataFrame中缺失值的函数是？',
+        options: ['A. check_missing()', 'B. isnull()或isna()', 'C. find_na()', 'D. has_none()'],
+        correct: 1,
+        explanation: 'isnull()和isna()函数都可以返回布尔DataFrame，标识每个位置是否为缺失值（NaN或None），两个函数功能完全相同。'
       },
       {
         id: 'q5',
-        text: '填空题：使用drop_duplicates()删除重复行时，默认保留______次出现的记录（填"第一"或"1"）',
-        correct: '第一',
-        explanation: 'drop_duplicates()默认keep="first"，即保留第一次出现的记录，删除后续重复的记录。'
+        text: '使用drop_duplicates()删除重复行时，默认保留哪条记录？',
+        options: ['A. 最后一次出现的记录', 'B. 第一次出现的记录', 'C. 随机保留一条', 'D. 不保留，全部删除'],
+        correct: 1,
+        explanation: 'drop_duplicates()默认keep="first"，即保留第一次出现的记录，删除后续重复的记录。也可以设置keep="last"保留最后一条。'
       }
     ]
   },
@@ -752,15 +760,17 @@ print(df[['门店', '月份', '销售额', '销售额排名']])`,
       },
       {
         id: 'q4',
-        text: '填空题：groupby返回的GroupBy对象，调用agg()后返回的是______维度的数据（填"减少"或"更少"）',
-        correct: '减少',
-        explanation: 'agg()执行聚合操作后，数据维度会减少（行数变少），而transform()保持原数据维度不变。'
+        text: 'groupby返回的GroupBy对象调用agg()后，数据维度会发生什么变化？',
+        options: ['A. 保持不变', 'B. 维度减少（行数变少）', 'C. 维度增加（行数变多）', 'D. 取决于数据'],
+        correct: 1,
+        explanation: 'agg()执行聚合操作后，数据维度会减少（行数变少），因为多个行会被合并为一个聚合结果。而transform()保持原数据维度不变。'
       },
       {
         id: 'q5',
-        text: '填空题：使用transform计算组内占比时，需要先计算组的______（填"总和"或"总数"）',
-        correct: '总和',
-        explanation: '计算组内占比需要先用transform("sum")计算组内总和，然后用各值除以总和得到占比。'
+        text: '使用transform计算组内占比时，通常需要先计算组内的什么？',
+        options: ['A. 平均值', 'B. 总和', 'C. 最大值', 'D. 中位数'],
+        correct: 1,
+        explanation: '计算组内占比需要先用transform("sum")计算组内总和，然后用每行的值除以组总和得到占比。这样每行都能对应到自己组的总和。'
       }
     ]
   },
@@ -899,15 +909,17 @@ print(result_merge)`,
       },
       {
         id: 'q4',
-        text: '填空题：concat默认沿______轴拼接数据（填"0"或"纵向"）',
-        correct: '0',
-        explanation: 'concat(axis=0)为纵向拼接，会增加行数；axis=1为横向拼接，会增加列数。'
+        text: 'concat默认沿哪个轴拼接数据？',
+        options: ['A. axis=0（纵向，增加行数）', 'B. axis=1（横向，增加列数）', 'C. axis=2', 'D. 取决于数据大小'],
+        correct: 0,
+        explanation: 'concat默认axis=0，表示纵向拼接（增加行数）。axis=1表示横向拼接（增加列数）。'
       },
       {
         id: 'q5',
-        text: '填空题：merge函数中，______参数用于指定连接的方式，如inner、left、right、outer（填"how"）',
-        correct: 'how',
-        explanation: 'how参数指定连接类型：inner（内连接，只保留两边都有的键）、outer（外连接，保留所有键）。'
+        text: 'merge函数中，哪个参数用于指定连接方式？',
+        options: ['A. join', 'B. how', 'C. method', 'D. type'],
+        correct: 1,
+        explanation: 'how参数指定连接类型：inner（内连接，只保留两边都有的键）、outer（外连接，保留所有键）、left、right等。'
       }
     ]
   },
@@ -1025,15 +1037,17 @@ print(df)`,
       },
       {
         id: 'q4',
-        text: '填空题：将字符串日期转换为datetime类型使用的函数是pd.to______（填"datetime"）',
-        correct: 'datetime',
-        explanation: 'pd.to_datetime()是Pandas中用于将字符串转换为datetime类型的函数，转换后可提取年、月、日等属性。'
+        text: '将字符串日期转换为datetime类型使用的函数是？',
+        options: ['A. to_date()', 'B. pd.to_datetime()', 'C. parse_date()', 'D. datetime()'],
+        correct: 1,
+        explanation: 'pd.to_datetime()是Pandas中用于将字符串转换为datetime类型的标准函数，转换后可以提取年、月、日、星期等属性进行时间分析。'
       },
       {
         id: 'q5',
-        text: '填空题：resample的______参数指定时间频率，如\'M\'表示月度（填"freq"或"rule"）',
-        correct: 'freq',
-        explanation: 'resample的freq参数指定重采样的时间频率：\'D\'日、\'W\'周、\'M\'月、\'Q\'季、\'Y\'年。'
+        text: 'resample的哪个参数用于指定时间频率？',
+        options: ['A. freq', 'B. time', 'C. period', 'D. rate'],
+        correct: 0,
+        explanation: 'resample的第一个位置参数就是时间频率："D"表示日、"W"表示周、"M"表示月、"Q"表示季度、"Y"表示年等。'
       }
     ]
   },
@@ -1161,15 +1175,17 @@ plt.show()`,
       },
       {
         id: 'q4',
-        text: '填空题：DataFrame.plot()的______参数用于指定图表类型，如line、bar、pie等（填"kind"）',
-        correct: 'kind',
-        explanation: 'kind参数指定图表类型：line（折线图）、bar（柱状图）、pie（饼图）、scatter（散点图）等。'
+        text: 'DataFrame.plot()的哪个参数用于指定图表类型？',
+        options: ['A. type', 'B. kind', 'C. chart', 'D. style'],
+        correct: 1,
+        explanation: 'kind参数指定图表类型：line（折线图）、bar（柱状图）、pie（饼图）、scatter（散点图）、hist（直方图）等是最常用的选项。'
       },
       {
         id: 'q5',
-        text: '填空题：使用plt.savefig()保存图表时，文件格式由______参数决定（填"文件名扩展名"或"fname"）',
-        correct: '文件名扩展名',
-        explanation: 'plt.savefig()根据文件名的扩展名自动决定保存格式，如.png、.jpg、.pdf等。'
+        text: '使用plt.savefig()保存图表时，文件格式如何决定？',
+        options: ['A. 通过format参数指定', 'B. 根据文件名扩展名自动决定', 'C. 默认都是.png格式', 'D. 通过dpi参数决定'],
+        correct: 1,
+        explanation: 'plt.savefig()根据文件名的扩展名自动决定保存格式，如.png、.jpg、.pdf等。也可以显式通过format参数指定。'
       }
     ]
   },
@@ -1297,14 +1313,16 @@ print(ct3)`,
       },
       {
         id: 'q4',
-        text: '填空题：pivot_table的______参数用于指定列索引，会将值展开为列（填"columns"）',
-        correct: 'columns',
-        explanation: 'columns参数将指定的列值展开为多个列，创建交叉表格结构，方便对比不同类别的数据。'
+        text: 'pivot_table的哪个参数用于指定列索引，会将值展开为列？',
+        options: ['A. index', 'B. values', 'C. columns', 'D. aggfunc'],
+        correct: 2,
+        explanation: 'columns参数将指定的列值展开为多个列，创建交叉表格结构，方便对比不同类别的数据。index参数指定行索引。'
       },
       {
         id: 'q5',
-        text: '填空题：crosstab专门用于计算两个或多个分类变量的______表（填"频数"或"交叉频数"）',
-        correct: '频数',
+        text: 'crosstab专门用于计算什么类型的表？',
+        options: ['A. 数据摘要表', 'B. 两个或多个分类变量的频数表', 'C. 时间序列表', 'D. 相关性分析表'],
+        correct: 1,
         explanation: 'crosstab计算分类变量组合出现的次数，返回频数表（交叉表），适合快速查看变量间的分布关系。'
       }
     ]
@@ -1431,14 +1449,16 @@ print(df[['温度', 'polynomial']])`,
       },
       {
         id: 'q4',
-        text: '填空题：前向填充ffill使用缺失值______的有效值进行填充（填"前面"或"前一个"）',
-        correct: '前面',
+        text: '前向填充（ffill）使用什么值来填充缺失值？',
+        options: ['A. 缺失值后面的最近一个有效值', 'B. 缺失值前面的最近一个有效值', 'C. 整列的平均值', 'D. 整列的中位数'],
+        correct: 1,
         explanation: '前向填充(forward fill)用缺失值前面的最近一个有效值填充当前缺失值，适用于数据连续变化的场景。'
       },
       {
         id: 'q5',
-        text: '填空题：interpolate的线性插值在相邻有效值之间创建______过渡（填"直线"）',
-        correct: '直线',
+        text: 'interpolate的线性插值在相邻有效值之间创建什么类型的过渡？',
+        options: ['A. 直线过渡', 'B. 曲线过渡', 'C. 阶梯过渡', 'D. 随机过渡'],
+        correct: 0,
         explanation: '线性插值默认在相邻两个有效值之间创建直线路径，适用于数据变化相对平稳的情况。'
       }
     ]
@@ -1572,14 +1592,16 @@ print(f"整数列：int64 → int8，节省 {df['整数'].memory_usage(deep=True
       },
       {
         id: 'q4',
-        text: '填空题：向量化操作直接作用于整个数组，Pandas内部使用______代码执行（填"C"）',
-        correct: 'C',
+        text: '向量化操作在Pandas内部使用什么代码执行？',
+        options: ['A. Python代码', 'B. JavaScript代码', 'C. C代码', 'D. Java代码'],
+        correct: 2,
         explanation: '向量化操作避免了Python循环，内部使用编译好的C代码执行，大大提高计算效率。'
       },
       {
         id: 'q5',
-        text: '填空题：使用astype()转换数据类型时，int64转换为int8可以节省约______%的内存空间（填"87.5"）',
-        correct: '87.5',
+        text: '使用astype()将int64转换为int8可以节省约多少内存空间？',
+        options: ['A. 50%', 'B. 75%', 'C. 87.5%', 'D. 100%'],
+        correct: 2,
         explanation: 'int64占8字节，int8占1字节，所以可以节省(8-1)/8 = 87.5%的内存空间。'
       }
     ]
@@ -1756,14 +1778,16 @@ print("\\n分析完成！")`,
       },
       {
         id: 'q4',
-        text: '填空题：数据分析流程的第一步是明确______（填"分析目标"）',
-        correct: '分析目标',
+        text: '数据分析流程的第一步是什么？',
+        options: ['A. 数据收集', 'B. 明确分析目标', 'C. 数据清洗', 'D. 数据可视化'],
+        correct: 1,
         explanation: '明确分析目标是数据分析的第一步，决定了后续的数据收集、处理和分析方法的选择。'
       },
       {
         id: 'q5',
-        text: '填空题：数据清洗的主要工作包括处理缺失值、异常值和______（填"重复值"）',
-        correct: '重复值',
+        text: '数据清洗的主要工作包括处理什么？',
+        options: ['A. 缺失值、异常值和重复值', 'B. 数据类型转换', 'C. 数据排序', 'D. 数据归一化'],
+        correct: 0,
         explanation: '数据清洗三大任务：缺失值处理（删除或填充）、异常值处理（识别和修正）、重复值处理（删除）。'
       }
     ]
