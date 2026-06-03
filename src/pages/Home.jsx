@@ -45,8 +45,13 @@ const AnimatedCounter = ({ target, duration = 2000, suffix = '' }) => {
 
 export const Home = ({ setActivePage }) => {
   const [selectedProject, setSelectedProject] = useState(null);
-  const [quizAnswers, setQuizAnswers] = useState({});
-  const [quizSubmissions, setQuizSubmissions] = useState(new Set());
+  
+  // 从localStorage读取练习数据
+  const savedQuizAnswers = JSON.parse(localStorage.getItem('dailyQuizAnswers') || '{}');
+  const savedQuizSubmissions = JSON.parse(localStorage.getItem('dailyQuizSubmissions') || '[]');
+  
+  const [quizAnswers, setQuizAnswers] = useState(savedQuizAnswers);
+  const [quizSubmissions, setQuizSubmissions] = useState(new Set(savedQuizSubmissions));
   const [code, setCode] = useState(`print("Hello PandaLearn")
 print("欢迎使用Pandas学习平台")
 
@@ -83,7 +88,25 @@ print(f"开始学习 {name}")`);
     const selectedOption = quizAnswers[questionId];
     if (selectedOption !== undefined && !quizSubmissions.has(questionId)) {
       alert(`演示模式：你选择了 ${String.fromCharCode(65 + selectedOption)}`);
-      setQuizSubmissions(new Set([...quizSubmissions, questionId]));
+      const newSubmissions = new Set([...quizSubmissions, questionId]);
+      setQuizSubmissions(newSubmissions);
+      // 保存到localStorage
+      localStorage.setItem('dailyQuizSubmissions', JSON.stringify([...newSubmissions]));
+    }
+  };
+
+  const handleQuizAnswerChange = (questionId, optionIndex) => {
+    const newAnswers = { ...quizAnswers, [questionId]: optionIndex };
+    setQuizAnswers(newAnswers);
+    localStorage.setItem('dailyQuizAnswers', JSON.stringify(newAnswers));
+  };
+
+  const handleResetQuiz = () => {
+    if (confirm('确定要重置所有练习吗？')) {
+      setQuizAnswers({});
+      setQuizSubmissions(new Set());
+      localStorage.removeItem('dailyQuizAnswers');
+      localStorage.removeItem('dailyQuizSubmissions');
     }
   };
 
@@ -301,61 +324,77 @@ print(f"开始学习 {name}")`);
       <section style={styles.section}>
         <div style={styles.quizHeader}>
           <h2 style={styles.sectionTitle}>📝 每日一练</h2>
-          <div style={styles.quizProgress}>
-            当前完成：{quizSubmissions.size} / {dailyQuizQuestions.length} 题
+          <div style={styles.quizHeaderRight}>
+            <div style={styles.quizProgress}>
+              <span style={styles.quizProgressIcon}>
+                {quizSubmissions.size === dailyQuizQuestions.length ? '🎉' : '📊'}
+              </span>
+              当前完成：{quizSubmissions.size} / {dailyQuizQuestions.length} 题
+            </div>
+            {quizSubmissions.size > 0 && (
+              <button onClick={handleResetQuiz} style={styles.quizResetButton}>
+                🔄 重置所有
+              </button>
+            )}
           </div>
         </div>
         <div style={styles.quizContainer}>
-          {dailyQuizQuestions.map((question, idx) => (
-            <div key={question.id} style={styles.quizCard}>
-              <div style={styles.quizQuestionHeader}>
-                <span style={styles.quizNumber}>第 {idx + 1} 题</span>
-                <span style={styles.quizTopic}>{question.title}</span>
-                {quizSubmissions.has(question.id) && (
-                  <span style={styles.quizCompleted}>✅ 已完成</span>
-                )}
-              </div>
-              <h3 style={styles.quizQuestion}>{question.text}</h3>
-              <div style={styles.quizOptions}>
-                {question.options.map((option, optIdx) => (
-                  <label
-                    key={optIdx}
-                    style={{
-                      ...styles.quizOption,
-                      ...(quizAnswers[question.id] === optIdx ? styles.quizOptionSelected : {})
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name={`quiz-${question.id}`}
-                      value={optIdx}
-                      checked={quizAnswers[question.id] === optIdx}
-                      onChange={() => setQuizAnswers({
-                        ...quizAnswers,
-                        [question.id]: optIdx
-                      })}
-                      style={styles.quizRadio}
-                    />
-                    <span style={styles.quizOptionLabel}>
-                      {String.fromCharCode(65 + optIdx)}. {option}
-                    </span>
-                  </label>
-                ))}
-              </div>
-              <button
-                onClick={() => handleQuizSubmit(question.id)}
+          {dailyQuizQuestions.map((question, idx) => {
+            const isCompleted = quizSubmissions.has(question.id);
+            return (
+              <div
+                key={question.id}
                 style={{
-                  ...styles.quizSubmitButton,
-                  ...(quizSubmissions.has(question.id) ? styles.quizSubmitButtonDisabled : {})
+                  ...styles.quizCard,
+                  ...(isCompleted ? styles.quizCardCompleted : {})
                 }}
-                disabled={
-                  quizAnswers[question.id] === undefined || quizSubmissions.has(question.id)
-                }
               >
-                {quizSubmissions.has(question.id) ? '已提交' : '提交答案'}
-              </button>
-            </div>
-          ))}
+                <div style={styles.quizQuestionHeader}>
+                  <span style={styles.quizNumber}>
+                    {isCompleted ? '✅' : '⚪'} 第 {idx + 1} 题
+                  </span>
+                  <span style={styles.quizTopic}>{question.title}</span>
+                  {isCompleted && <span style={styles.quizCompleted}>已完成</span>}
+                </div>
+                <h3 style={styles.quizQuestion}>{question.text}</h3>
+                <div style={styles.quizOptions}>
+                  {question.options.map((option, optIdx) => (
+                    <label
+                      key={optIdx}
+                      style={{
+                        ...styles.quizOption,
+                        ...(quizAnswers[question.id] === optIdx ? styles.quizOptionSelected : {})
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name={`quiz-${question.id}`}
+                        value={optIdx}
+                        checked={quizAnswers[question.id] === optIdx}
+                        onChange={() => handleQuizAnswerChange(question.id, optIdx)}
+                        style={styles.quizRadio}
+                      />
+                      <span style={styles.quizOptionLabel}>
+                        {String.fromCharCode(65 + optIdx)}. {option}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <button
+                  onClick={() => handleQuizSubmit(question.id)}
+                  style={{
+                    ...styles.quizSubmitButton,
+                    ...(isCompleted ? styles.quizSubmitButtonDisabled : {})
+                  }}
+                  disabled={
+                    quizAnswers[question.id] === undefined || isCompleted
+                  }
+                >
+                  {isCompleted ? '已提交' : '提交答案'}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -948,13 +987,36 @@ const styles = {
     gap: '12px',
     marginBottom: '24px'
   },
+  quizHeaderRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap'
+  },
   quizProgress: {
     fontSize: '16px',
     fontWeight: 600,
     color: '#667eea',
     background: '#f3e5f5',
     padding: '8px 20px',
-    borderRadius: '20px'
+    borderRadius: '20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  quizProgressIcon: {
+    fontSize: '18px'
+  },
+  quizResetButton: {
+    padding: '8px 18px',
+    background: '#fff3e0',
+    color: '#f57c00',
+    border: '1px solid #ffcc80',
+    borderRadius: '12px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.3s ease'
   },
   quizContainer: {
     display: 'flex',
@@ -966,6 +1028,10 @@ const styles = {
     borderRadius: '16px',
     padding: '28px 28px 24px',
     transition: 'all 0.3s ease'
+  },
+  quizCardCompleted: {
+    background: 'rgba(76, 175, 80, 0.08)',
+    border: '1px solid rgba(76, 175, 80, 0.3)'
   },
   quizQuestionHeader: {
     display: 'flex',
