@@ -344,9 +344,9 @@ sys.stdout = StringIO()
           </div>
           <div style={styles.statCard}>
             <div style={styles.statNumber}>
-              <AnimatedCounter target={120} suffix="+道" />
+              <AnimatedCounter target={3} suffix="+道" />
             </div>
-            <div style={styles.statLabel}>练习题</div>
+            <div style={styles.statLabel}>每日练习</div>
           </div>
         </div>
       </section>
