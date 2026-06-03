@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { courseContent } from '../data';
 
 export const Home = ({ setActivePage }) => {
+  const [selectedProject, setSelectedProject] = useState(null);
+
   // 热门项目数据
   const popularProjects = [
     {
@@ -156,11 +158,11 @@ export const Home = ({ setActivePage }) => {
           {popularProjects.map((project, index) => (
             <div
               key={project.id}
-              onClick={() => {
-                alert(`你点击了：${project.title}`);
-                setActivePage('projects');
+              onClick={() => setSelectedProject(project)}
+              style={{
+                ...styles.projectCard,
+                ...(selectedProject?.id === project.id ? styles.projectCardActive : {})
               }}
-              style={styles.projectCard}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-8px) scale(1.02)';
                 e.currentTarget.style.boxShadow = '0 16px 50px rgba(102, 126, 234, 0.25)';
@@ -177,6 +179,43 @@ export const Home = ({ setActivePage }) => {
             </div>
           ))}
         </div>
+        
+        {/* 项目详情面板 */}
+        {selectedProject && (
+          <div style={styles.projectDetailPanel}>
+            <div style={styles.projectDetailHeader}>
+              <div style={styles.projectDetailIcon}>{selectedProject.icon}</div>
+              <div style={styles.projectDetailTitleArea}>
+                <h2 style={styles.projectDetailTitle}>{selectedProject.title}</h2>
+                <span style={styles.projectDetailDifficulty}>{selectedProject.difficulty}</span>
+              </div>
+            </div>
+            <p style={styles.projectDetailDesc}>{selectedProject.description}</p>
+            <div style={styles.projectDetailActions}>
+              <button
+                onClick={() => setActivePage('projects')}
+                style={styles.projectDetailButton}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.2)';
+                }}
+              >
+                查看完整项目 →
+              </button>
+              <button
+                onClick={() => setSelectedProject(null)}
+                style={styles.projectDetailCloseButton}
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        )}
+        
         <div style={styles.viewMoreContainer}>
           <button
             onClick={() => setActivePage('projects')}
@@ -391,6 +430,10 @@ const styles = {
     transition: 'all 0.3s ease',
     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)'
   },
+  projectCardActive: {
+    border: '3px solid #667eea',
+    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)'
+  },
   projectIcon: {
     fontSize: '48px',
     marginBottom: '16px'
@@ -415,6 +458,86 @@ const styles = {
     borderRadius: '20px',
     fontSize: '12px',
     fontWeight: 500
+  },
+  // 项目详情面板
+  projectDetailPanel: {
+    marginTop: '32px',
+    background: 'white',
+    borderRadius: '20px',
+    padding: '32px',
+    boxShadow: '0 8px 40px rgba(102, 126, 234, 0.15)',
+    border: '2px solid #667eea'
+  },
+  projectDetailHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '20px',
+    marginBottom: '20px'
+  },
+  projectDetailIcon: {
+    fontSize: '56px',
+    width: '80px',
+    height: '80px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    borderRadius: '16px'
+  },
+  projectDetailTitleArea: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    flexWrap: 'wrap'
+  },
+  projectDetailTitle: {
+    fontSize: '28px',
+    fontWeight: 700,
+    color: '#333',
+    margin: 0
+  },
+  projectDetailDifficulty: {
+    padding: '6px 16px',
+    background: '#f3e5f5',
+    color: '#764ba2',
+    borderRadius: '20px',
+    fontSize: '14px',
+    fontWeight: 600
+  },
+  projectDetailDesc: {
+    fontSize: '16px',
+    color: '#666',
+    lineHeight: 1.8,
+    marginBottom: '24px'
+  },
+  projectDetailActions: {
+    display: 'flex',
+    gap: '12px',
+    flexWrap: 'wrap'
+  },
+  projectDetailButton: {
+    padding: '14px 32px',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '10px',
+    fontSize: '16px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.2)'
+  },
+  projectDetailCloseButton: {
+    padding: '14px 32px',
+    background: '#f5f5f5',
+    color: '#666',
+    border: '2px solid #e0e0e0',
+    borderRadius: '10px',
+    fontSize: '16px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.3s ease'
   },
   viewMoreContainer: {
     textAlign: 'center',
