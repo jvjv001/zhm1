@@ -370,25 +370,23 @@ print(f"开始学习 {name}")`);
                 <h3 style={styles.quizQuestion}>{question.text}</h3>
                 <div style={styles.quizOptions}>
                   {question.options.map((option, optIdx) => {
-                    let optionStyle = {};
+                    const finalStyle = { ...styles.quizOption };
+                    
                     if (isCompleted) {
                       if (optIdx === question.correct) {
-                        optionStyle = styles.quizOptionCorrect;
+                        Object.assign(finalStyle, styles.quizOptionCorrect);
                       } else if (userAnswer === optIdx && optIdx !== question.correct) {
-                        optionStyle = styles.quizOptionWrong;
+                        Object.assign(finalStyle, styles.quizOptionWrong);
                       }
+                      Object.assign(finalStyle, styles.quizOptionDisabled);
                     } else if (userAnswer === optIdx) {
-                      optionStyle = styles.quizOptionSelected;
+                      Object.assign(finalStyle, styles.quizOptionSelected);
                     }
                     
                     return (
                       <label
                         key={optIdx}
-                        style={{
-                          ...styles.quizOption,
-                          ...optionStyle,
-                          ...(isCompleted ? styles.quizOptionDisabled : {})
-                        }}
+                        style={finalStyle}
                       >
                         <input
                           type="radio"
