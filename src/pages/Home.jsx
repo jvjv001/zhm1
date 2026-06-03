@@ -45,6 +45,40 @@ const AnimatedCounter = ({ target, duration = 2000, suffix = '' }) => {
 
 export const Home = ({ setActivePage }) => {
   const [selectedProject, setSelectedProject] = useState(null);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizSubmissions, setQuizSubmissions] = useState(new Set());
+
+  const dailyQuizQuestions = [
+    {
+      id: 1,
+      title: 'Pandas入门',
+      text: 'Pandas中用于创建一维带标签数组的结构是？',
+      options: ['DataFrame', 'Series', 'Array', 'List'],
+      correct: 1
+    },
+    {
+      id: 2,
+      title: '数据处理',
+      text: '读取CSV文件应该使用哪个函数？',
+      options: ['read_excel()', 'read_csv()', 'read_file()', 'load_csv()'],
+      correct: 1
+    },
+    {
+      id: 3,
+      title: '数据筛选',
+      text: '查看数据前3行应该使用哪个方法？',
+      options: ['head(3)', 'tail(3)', 'first(3)', 'top(3)'],
+      correct: 0
+    }
+  ];
+
+  const handleQuizSubmit = (questionId) => {
+    const selectedOption = quizAnswers[questionId];
+    if (selectedOption !== undefined && !quizSubmissions.has(questionId)) {
+      alert(`演示模式：你选择了 ${String.fromCharCode(65 + selectedOption)}`);
+      setQuizSubmissions(new Set([...quizSubmissions, questionId]));
+    }
+  };
 
   // 热门项目数据
   const popularProjects = [
@@ -222,6 +256,68 @@ export const Home = ({ setActivePage }) => {
                 <div style={styles.stepArrow}>→</div>
               )}
             </React.Fragment>
+          ))}
+        </div>
+      </section>
+
+      {/* 每日一练 */}
+      <section style={styles.section}>
+        <div style={styles.quizHeader}>
+          <h2 style={styles.sectionTitle}>📝 每日一练</h2>
+          <div style={styles.quizProgress}>
+            当前完成：{quizSubmissions.size} / {dailyQuizQuestions.length} 题
+          </div>
+        </div>
+        <div style={styles.quizContainer}>
+          {dailyQuizQuestions.map((question, idx) => (
+            <div key={question.id} style={styles.quizCard}>
+              <div style={styles.quizQuestionHeader}>
+                <span style={styles.quizNumber}>第 {idx + 1} 题</span>
+                <span style={styles.quizTopic}>{question.title}</span>
+                {quizSubmissions.has(question.id) && (
+                  <span style={styles.quizCompleted}>✅ 已完成</span>
+                )}
+              </div>
+              <h3 style={styles.quizQuestion}>{question.text}</h3>
+              <div style={styles.quizOptions}>
+                {question.options.map((option, optIdx) => (
+                  <label
+                    key={optIdx}
+                    style={{
+                      ...styles.quizOption,
+                      ...(quizAnswers[question.id] === optIdx ? styles.quizOptionSelected : {})
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name={`quiz-${question.id}`}
+                      value={optIdx}
+                      checked={quizAnswers[question.id] === optIdx}
+                      onChange={() => setQuizAnswers({
+                        ...quizAnswers,
+                        [question.id]: optIdx
+                      })}
+                      style={styles.quizRadio}
+                    />
+                    <span style={styles.quizOptionLabel}>
+                      {String.fromCharCode(65 + optIdx)}. {option}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <button
+                onClick={() => handleQuizSubmit(question.id)}
+                style={{
+                  ...styles.quizSubmitButton,
+                  ...(quizSubmissions.has(question.id) ? styles.quizSubmitButtonDisabled : {})
+                }}
+                disabled={
+                  quizAnswers[question.id] === undefined || quizSubmissions.has(question.id)
+                }
+              >
+                {quizSubmissions.has(question.id) ? '已提交' : '提交答案'}
+              </button>
+            </div>
           ))}
         </div>
       </section>
@@ -774,5 +870,118 @@ const styles = {
   },
   footerDivider: {
     color: 'rgba(255, 255, 255, 0.4)'
+  },
+  // 每日一练样式
+  quizHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: '12px',
+    marginBottom: '24px'
+  },
+  quizProgress: {
+    fontSize: '16px',
+    fontWeight: 600,
+    color: '#667eea',
+    background: '#f3e5f5',
+    padding: '8px 20px',
+    borderRadius: '20px'
+  },
+  quizContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px'
+  },
+  quizCard: {
+    background: '#f5f5f5',
+    borderRadius: '16px',
+    padding: '28px 28px 24px',
+    transition: 'all 0.3s ease'
+  },
+  quizQuestionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '16px',
+    flexWrap: 'wrap'
+  },
+  quizNumber: {
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#667eea',
+    background: 'white',
+    padding: '6px 14px',
+    borderRadius: '8px'
+  },
+  quizTopic: {
+    fontSize: '14px',
+    color: '#777',
+    background: '#e8e8e8',
+    padding: '6px 14px',
+    borderRadius: '8px'
+  },
+  quizCompleted: {
+    marginLeft: 'auto',
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#4caf50'
+  },
+  quizQuestion: {
+    fontSize: '18px',
+    fontWeight: 600,
+    color: '#333',
+    marginBottom: '20px',
+    lineHeight: 1.5
+  },
+  quizOptions: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    marginBottom: '20px'
+  },
+  quizOption: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '14px 18px',
+    background: 'white',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    border: '2px solid transparent'
+  },
+  quizOptionSelected: {
+    borderColor: '#667eea',
+    background: '#f3e5f5'
+  },
+  quizRadio: {
+    width: '20px',
+    height: '20px',
+    cursor: 'pointer',
+    accentColor: '#667eea'
+  },
+  quizOptionLabel: {
+    flex: 1,
+    fontSize: '15px',
+    color: '#333',
+    cursor: 'pointer'
+  },
+  quizSubmitButton: {
+    width: '100%',
+    padding: '14px 24px',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '12px',
+    fontSize: '16px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.3s ease'
+  },
+  quizSubmitButtonDisabled: {
+    background: '#ccc',
+    cursor: 'not-allowed',
+    opacity: 0.7
   }
 };
