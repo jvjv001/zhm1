@@ -59,8 +59,7 @@ export const Home = ({ setActivePage }) => {
   const stats = [
     { number: '12', label: '知识点', suffix: '个' },
     { number: '10', label: '编程项目', suffix: '个' },
-    { number: '120', label: '练习题', suffix: '+道' },
-    { number: '1280', label: '学员人数', suffix: '+' }
+    { number: '120', label: '练习题', suffix: '+道' }
   ];
 
   return (
