@@ -21,14 +21,17 @@ export const Projects = () => {
         try {
           console.log('正在加载 Pyodide...');
           pyodideRef.current = await window.loadPyodide({
-            indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/'
+            indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.1/full/'
           });
+          console.log('正在安装 pandas 和 numpy...');
+          await pyodideRef.current.loadPackage(['pandas', 'numpy']);
           // 初始化标准输出捕获
           await pyodideRef.current.runPythonAsync(`
 import sys
 from io import StringIO
           `);
           setPyodideReady(true);
+          setPyodideLoading(false);
           console.log('Pyodide 加载完成!');
         } catch (error) {
           console.error('Pyodide 加载失败:', error);
