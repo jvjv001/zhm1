@@ -1,5 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { courseContent } from '../data';
+
+// 数字滚动动画组件
+const AnimatedCounter = ({ target, duration = 2000, suffix = '' }) => {
+  const [count, setCount] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+          const startTime = Date.now();
+          const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            // 使用easeOutExpo缓动
+            const easeProgress = 1 - Math.pow(1 - progress, 4);
+            setCount(Math.floor(easeProgress * target));
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            }
+          };
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, [target, duration, hasAnimated]);
+
+  return (
+    <span ref={ref}>
+      {count}{suffix}
+    </span>
+  );
+};
 
 export const Home = ({ setActivePage }) => {
   const [selectedProject, setSelectedProject] = useState(null);
@@ -57,11 +99,12 @@ export const Home = ({ setActivePage }) => {
     }
   ];
 
-  // 学习数据
-  const stats = [
-    { number: '12', label: '知识点', suffix: '个' },
-    { number: '10', label: '编程项目', suffix: '个' },
-    { number: '120', label: '练习题', suffix: '+道' }
+  // 学习路线步骤
+  const learningSteps = [
+    { step: 1, title: '基础语法', desc: 'Python入门与数据类型', icon: '📚' },
+    { step: 2, title: '数据处理', desc: 'Pandas数据框操作', icon: '🔧' },
+    { step: 3, title: '分析实战', desc: '数据分析与可视化', icon: '📊' },
+    { step: 4, title: '项目作品', desc: '独立完成实战项目', icon: '🎯' }
   ];
 
   return (
@@ -139,14 +182,46 @@ export const Home = ({ setActivePage }) => {
         </div>
       </section>
 
-      {/* 学习数据统计 */}
+      {/* 学习数据统计 - 大字体统计卡片 */}
       <section style={styles.statsSection}>
         <div style={styles.statsContainer}>
-          {stats.map((stat, index) => (
-            <div key={index} style={styles.statItem}>
-              <div style={styles.statNumber}>{stat.number}<span style={styles.statSuffix}>{stat.suffix}</span></div>
-              <div style={styles.statLabel}>{stat.label}</div>
+          <div style={styles.statCard}>
+            <div style={styles.statNumber}>
+              <AnimatedCounter target={12} suffix="个" />
             </div>
+            <div style={styles.statLabel}>知识点</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statNumber}>
+              <AnimatedCounter target={10} suffix="个" />
+            </div>
+            <div style={styles.statLabel}>编程项目</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statNumber}>
+              <AnimatedCounter target={120} suffix="+道" />
+            </div>
+            <div style={styles.statLabel}>练习题</div>
+          </div>
+        </div>
+      </section>
+
+      {/* 学习路线 */}
+      <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>学习路线</h2>
+        <div style={styles.learningPathContainer}>
+          {learningSteps.map((item, index) => (
+            <React.Fragment key={item.step}>
+              <div style={styles.learningStep}>
+                <div style={styles.stepIcon}>{item.icon}</div>
+                <div style={styles.stepNumber}>第{item.step}步</div>
+                <div style={styles.stepTitle}>{item.title}</div>
+                <div style={styles.stepDesc}>{item.desc}</div>
+              </div>
+              {index < learningSteps.length - 1 && (
+                <div style={styles.stepArrow}>→</div>
+              )}
+            </React.Fragment>
           ))}
         </div>
       </section>
@@ -176,6 +251,17 @@ export const Home = ({ setActivePage }) => {
               <h3 style={styles.projectTitle}>{project.title}</h3>
               <p style={styles.projectDesc}>{project.description}</p>
               <span style={styles.projectDifficulty}>{project.difficulty}</span>
+              {/* 查看详情按钮 */}
+              <a
+                href="#0"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectedProject(project);
+                }}
+                style={styles.viewDetailLink}
+              >
+                查看详情 »
+              </a>
             </div>
           ))}
         </div>
@@ -233,6 +319,27 @@ export const Home = ({ setActivePage }) => {
           </button>
         </div>
       </section>
+
+      {/* 页脚 */}
+      <footer style={styles.footer}>
+        <div style={styles.footerContent}>
+          <div style={styles.footerLogo}>
+            <span style={styles.footerLogoIcon}>🐼</span>
+            <span style={styles.footerLogoText}>PandaLearn</span>
+          </div>
+          <div style={styles.footerInfo}>
+            <p>© 2024 PandaLearn - 商务数据分析在线教育平台</p>
+            <p>联系我们: support@pandalearn.com</p>
+          </div>
+          <div style={styles.footerLinks}>
+            <a href="#0" style={styles.footerLink}>使用条款</a>
+            <span style={styles.footerDivider}>|</span>
+            <a href="#0" style={styles.footerLink}>隐私政策</a>
+            <span style={styles.footerDivider}>|</span>
+            <a href="#0" style={styles.footerLink}>帮助中心</a>
+          </div>
+        </div>
+      </footer>
 
       {/* 底部间距 */}
       <div style={{ height: '60px' }}></div>
@@ -386,35 +493,84 @@ const styles = {
     color: '#666',
     lineHeight: 1.6
   },
-  // 学习数据统计
+  // 学习数据统计 - 大字体卡片
   statsSection: {
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    padding: '50px 24px',
+    padding: '60px 24px',
     margin: '20px 0'
   },
   statsContainer: {
     maxWidth: '1000px',
     margin: '0 auto',
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
     gap: '30px',
     textAlign: 'center'
   },
-  statItem: {
-    color: 'white'
+  statCard: {
+    background: 'rgba(255, 255, 255, 0.15)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '20px',
+    padding: '32px 24px',
+    border: '1px solid rgba(255, 255, 255, 0.2)'
   },
   statNumber: {
-    fontSize: 'clamp(36px, 5vw, 48px)',
+    fontSize: 'clamp(42px, 6vw, 56px)',
     fontWeight: 700,
-    lineHeight: 1.2
-  },
-  statSuffix: {
-    fontSize: 'clamp(20px, 3vw, 28px)'
+    color: 'white',
+    lineHeight: 1.2,
+    textShadow: '0 2px 10px rgba(0, 0, 0, 0.1)'
   },
   statLabel: {
-    fontSize: '16px',
-    opacity: 0.9,
-    marginTop: '8px'
+    fontSize: '18px',
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: '8px',
+    fontWeight: 500
+  },
+  // 学习路线
+  learningPathContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: '16px'
+  },
+  learningStep: {
+    background: 'white',
+    borderRadius: '16px',
+    padding: '28px 24px',
+    textAlign: 'center',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+    minWidth: '180px',
+    flex: '1',
+    maxWidth: '220px'
+  },
+  stepIcon: {
+    fontSize: '40px',
+    marginBottom: '12px'
+  },
+  stepNumber: {
+    fontSize: '12px',
+    color: '#667eea',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    marginBottom: '8px'
+  },
+  stepTitle: {
+    fontSize: '18px',
+    fontWeight: 600,
+    color: '#333',
+    marginBottom: '4px'
+  },
+  stepDesc: {
+    fontSize: '13px',
+    color: '#888'
+  },
+  stepArrow: {
+    fontSize: '28px',
+    color: '#667eea',
+    fontWeight: 300,
+    flexShrink: 0
   },
   // 热门项目
   projectGrid: {
@@ -428,7 +584,9 @@ const styles = {
     padding: '32px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)'
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+    display: 'flex',
+    flexDirection: 'column'
   },
   projectCardActive: {
     border: '3px solid #667eea',
@@ -448,7 +606,8 @@ const styles = {
     fontSize: '14px',
     color: '#666',
     lineHeight: 1.6,
-    marginBottom: '16px'
+    marginBottom: '16px',
+    flex: 1
   },
   projectDifficulty: {
     display: 'inline-block',
@@ -457,7 +616,19 @@ const styles = {
     color: '#764ba2',
     borderRadius: '20px',
     fontSize: '12px',
-    fontWeight: 500
+    fontWeight: 500,
+    marginBottom: '16px',
+    alignSelf: 'flex-start'
+  },
+  viewDetailLink: {
+    color: '#667eea',
+    fontSize: '14px',
+    fontWeight: 600,
+    textDecoration: 'none',
+    padding: '8px 0',
+    borderTop: '1px solid #f0f0f0',
+    marginTop: 'auto',
+    transition: 'color 0.2s ease'
   },
   // 项目详情面板
   projectDetailPanel: {
@@ -554,5 +725,54 @@ const styles = {
     cursor: 'pointer',
     transition: 'all 0.3s ease',
     boxShadow: '0 4px 15px rgba(102, 126, 234, 0.2)'
+  },
+  // 页脚
+  footer: {
+    background: '#2d2d3a',
+    color: 'white',
+    padding: '40px 24px'
+  },
+  footerContent: {
+    maxWidth: '1200px',
+    margin: '0 auto',
+    textAlign: 'center'
+  },
+  footerLogo: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '12px',
+    marginBottom: '20px'
+  },
+  footerLogoIcon: {
+    fontSize: '28px'
+  },
+  footerLogoText: {
+    fontSize: '22px',
+    fontWeight: 700,
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent'
+  },
+  footerInfo: {
+    fontSize: '14px',
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: '16px',
+    lineHeight: 1.8
+  },
+  footerLinks: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '8px',
+    flexWrap: 'wrap'
+  },
+  footerLink: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    textDecoration: 'none',
+    fontSize: '14px',
+    transition: 'color 0.2s ease'
+  },
+  footerDivider: {
+    color: 'rgba(255, 255, 255, 0.4)'
   }
 };
