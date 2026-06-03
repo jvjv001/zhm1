@@ -47,6 +47,13 @@ export const Home = ({ setActivePage }) => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmissions, setQuizSubmissions] = useState(new Set());
+  const [code, setCode] = useState(`print("Hello PandaLearn")
+print("欢迎使用Pandas学习平台")
+
+# 这是一个模拟运行演示
+name = "Pandas"
+print(f"开始学习 {name}")`);
+  const [output, setOutput] = useState("");
 
   const dailyQuizQuestions = [
     {
@@ -78,6 +85,36 @@ export const Home = ({ setActivePage }) => {
       alert(`演示模式：你选择了 ${String.fromCharCode(65 + selectedOption)}`);
       setQuizSubmissions(new Set([...quizSubmissions, questionId]));
     }
+  };
+
+  const handleRunCode = () => {
+    let outputText = "";
+    
+    const printRegex = /print\s*\(([\s\S]*?)\)\s*;?\s*(?:\n|$)/g;
+    let match;
+    
+    while ((match = printRegex.exec(code)) !== null) {
+      let content = match[1].trim();
+      
+      if (content.startsWith('f"') || content.startsWith("f'")) {
+        content = content.slice(2, -1);
+        content = content.replace(/\{(\w+)\}/g, (_, varName) => {
+          const varRegex = new RegExp(`${varName}\\s*=\\s*(["'])(.*?)\\1`, 'g');
+          const varMatch = varRegex.exec(code);
+          return varMatch ? varMatch[2] : `{${varName}}`;
+        });
+      } else {
+        content = content.replace(/^["']|["']$/g, '');
+      }
+      
+      outputText += content + "\n";
+    }
+    
+    if (outputText === "") {
+      outputText = "(没有检测到 print 语句，请添加 print 来查看输出)";
+    }
+    
+    setOutput(outputText);
   };
 
   // 热门项目数据
@@ -414,6 +451,37 @@ export const Home = ({ setActivePage }) => {
             查看全部项目 →
           </button>
         </div>
+      </section>
+
+      {/* 在线代码运行演示 */}
+      <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>🐍 在线体验区</h2>
+        <div style={styles.codeRunnerContainer}>
+          <div style={styles.codeEditorSection}>
+            <div style={styles.codeEditorHeader}>
+              <span>代码编辑器</span>
+              <button
+                onClick={handleRunCode}
+                style={styles.runButton}
+              >
+                ▶ 运行
+              </button>
+            </div>
+            <textarea
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              style={styles.codeEditor}
+              spellCheck={false}
+            />
+          </div>
+          <div style={styles.outputSection}>
+            <div style={styles.outputHeader}>输出结果</div>
+            <pre style={styles.outputBox}>{output || "等待运行..."}</pre>
+          </div>
+        </div>
+        <p style={styles.codeRunnerNote}>
+          ⚠️ 当前为演示模拟运行，实际环境将支持完整 Python
+        </p>
       </section>
 
       {/* 页脚 */}
@@ -983,5 +1051,79 @@ const styles = {
     background: '#ccc',
     cursor: 'not-allowed',
     opacity: 0.7
+  },
+  // 在线代码运行器样式
+  codeRunnerContainer: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '24px',
+    background: 'white',
+    borderRadius: '20px',
+    padding: '24px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+  },
+  codeEditorSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px'
+  },
+  codeEditorHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontWeight: 600,
+    color: '#333'
+  },
+  runButton: {
+    padding: '8px 20px',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.3s ease'
+  },
+  codeEditor: {
+    width: '100%',
+    height: '300px',
+    padding: '16px',
+    fontFamily: '"Courier New", Courier, monospace',
+    fontSize: '14px',
+    lineHeight: 1.6,
+    border: '2px solid #e0e0e0',
+    borderRadius: '12px',
+    background: '#fafafa',
+    resize: 'none'
+  },
+  outputSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px'
+  },
+  outputHeader: {
+    fontWeight: 600,
+    color: '#333'
+  },
+  outputBox: {
+    flex: 1,
+    minHeight: '300px',
+    margin: 0,
+    padding: '16px',
+    background: '#2d2d3a',
+    color: '#f0f0f0',
+    fontFamily: '"Courier New", Courier, monospace',
+    fontSize: '14px',
+    lineHeight: 1.6,
+    borderRadius: '12px',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word'
+  },
+  codeRunnerNote: {
+    textAlign: 'center',
+    color: '#888',
+    fontSize: '14px',
+    marginTop: '16px'
   }
 };
