@@ -7,6 +7,7 @@ export const Header = ({ activePage, setActivePage }) => {
   const [showResults, setShowResults] = useState(false);
   
   const navItems = [
+    { id: 'home', label: '首页', icon: '🏠' },
     { id: 'course', label: '课程学习', icon: '📚' },
     { id: 'projects', label: '编程项目', icon: '💻' },
     { id: 'quiz', label: '练习测评', icon: '📝' },
