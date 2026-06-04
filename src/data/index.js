@@ -2,3 +2,4 @@
 export { projectsData } from './projectsData';
 export { questionBank } from './questionBank';
 export { courseContent } from './courseContent';
+export { fullQuestionBank } from './fullQuestionBank';

@@ -9,6 +9,7 @@ export const Quiz = () => {
   const [mistakeBook, setMistakeBook] = useState([]);
   const [practiceHistory, setPracticeHistory] = useState([]);
   const [selectedType, setSelectedType] = useState('all'); // 'all', 'single', 'multiple', 'truefalse'
+  const [selectedDifficulty, setSelectedDifficulty] = useState('all'); // 'all', 'easy', 'medium', 'hard'
 
   // 从localStorage加载数据
   useEffect(() => {
@@ -46,6 +47,7 @@ export const Quiz = () => {
     setSelectedTopic(topic);
     setActiveTab('quiz');
     setSelectedType('all');
+    setSelectedDifficulty('all');
   };
 
   // 单选题/判断题选择答案
@@ -421,14 +423,21 @@ export const Quiz = () => {
       selectedTopic.questions.find(q => q.id === id)
     ).length;
 
-    // 根据筛选类型过滤题目
-    const filteredQuestions = selectedType === 'all' 
-      ? selectedTopic.questions 
-      : selectedTopic.questions.filter(q => q.type === selectedType);
+    // 根据筛选类型和难度过滤题目
+    const filteredQuestions = selectedTopic.questions.filter(q => {
+      const typeMatch = selectedType === 'all' || q.type === selectedType;
+      const difficultyMatch = selectedDifficulty === 'all' || q.difficulty === selectedDifficulty;
+      return typeMatch && difficultyMatch;
+    });
 
     // 统计各类型题目的已完成数量
     const getTypeCount = (type) => {
       return selectedTopic.questions.filter(q => q.type === type).length;
+    };
+    
+    // 统计各难度题目的数量
+    const getDifficultyCount = (difficulty) => {
+      return selectedTopic.questions.filter(q => q.difficulty === difficulty).length;
     };
 
     return (
@@ -481,6 +490,47 @@ export const Quiz = () => {
             }}
           >
             判断(5)
+          </button>
+        </div>
+        
+        {/* 难度筛选标签 */}
+        <div style={styles.difficultyFilter}>
+          <span style={styles.filterLabel}>难度筛选：</span>
+          <button
+            onClick={() => setSelectedDifficulty('all')}
+            style={{
+              ...styles.difficultyButton,
+              ...(selectedDifficulty === 'all' ? styles.difficultyButtonActive : {})
+            }}
+          >
+            全部({getDifficultyCount('easy') + getDifficultyCount('medium') + getDifficultyCount('hard')})
+          </button>
+          <button
+            onClick={() => setSelectedDifficulty('easy')}
+            style={{
+              ...styles.difficultyButton,
+              ...(selectedDifficulty === 'easy' ? styles.difficultyButtonEasyActive : {})
+            }}
+          >
+            🟢 入门({getDifficultyCount('easy')})
+          </button>
+          <button
+            onClick={() => setSelectedDifficulty('medium')}
+            style={{
+              ...styles.difficultyButton,
+              ...(selectedDifficulty === 'medium' ? styles.difficultyButtonMediumActive : {})
+            }}
+          >
+            🟡 基础({getDifficultyCount('medium')})
+          </button>
+          <button
+            onClick={() => setSelectedDifficulty('hard')}
+            style={{
+              ...styles.difficultyButton,
+              ...(selectedDifficulty === 'hard' ? styles.difficultyButtonHardActive : {})
+            }}
+          >
+            🔴 进阶({getDifficultyCount('hard')})
           </button>
         </div>
 
@@ -858,6 +908,53 @@ const styles = {
   typeFilterButtonActive: {
     borderColor: '#667eea',
     background: '#667eea',
+    color: 'white'
+  },
+  // 难度筛选样式
+  difficultyFilter: {
+    display: 'flex',
+    gap: '8px',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    padding: '12px 16px',
+    background: '#f8f9fa',
+    borderRadius: '12px'
+  },
+  filterLabel: {
+    fontSize: '14px',
+    fontWeight: 600,
+    color: '#666',
+    marginRight: '8px'
+  },
+  difficultyButton: {
+    padding: '6px 14px',
+    border: '2px solid #e0e0e0',
+    borderRadius: '16px',
+    background: 'white',
+    color: '#666',
+    fontSize: '13px',
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  },
+  difficultyButtonActive: {
+    borderColor: '#667eea',
+    background: '#667eea',
+    color: 'white'
+  },
+  difficultyButtonEasyActive: {
+    borderColor: '#4caf50',
+    background: '#4caf50',
+    color: 'white'
+  },
+  difficultyButtonMediumActive: {
+    borderColor: '#ff9800',
+    background: '#ff9800',
+    color: 'white'
+  },
+  difficultyButtonHardActive: {
+    borderColor: '#f44336',
+    background: '#f44336',
     color: 'white'
   },
   resetButton: {

@@ -16,8 +16,13 @@ export default defineConfig({
       output: {
         // 手动分包策略：React生态库单独打包
         manualChunks: {
-          'react-vendor': ['react', 'react-dom']
-        }
+          'react-vendor': ['react', 'react-dom'],
+          'zustand-vendor': ['zustand']
+        },
+        // 优化chunk命名
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]'
       }
     },
     // 使用esbuild压缩（内置，无需额外安装terser）
@@ -29,10 +34,15 @@ export default defineConfig({
     // 生成sourcemap（生产环境建议关闭）
     sourcemap: false,
     // 资源内联阈值 4KB
-    assetsInlineLimit: 4096
+    assetsInlineLimit: 4096,
+    // 启用压缩报告
+    reportCompressedSize: true,
+    // 目标浏览器
+    target: 'es2020'
   },
   // 优化依赖预构建
   optimizeDeps: {
-    include: ['react', 'react-dom']
+    include: ['react', 'react-dom', 'zustand'],
+    exclude: []
   }
 })

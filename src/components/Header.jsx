@@ -211,15 +211,15 @@ export const Header = ({ activePage, setActivePage }) => {
   };
 
   return (
-    <header style={{ ...styles.header, ...(theme === 'dark' ? styles.headerDark : {}) }}>
-      <div style={styles.headerContent}>
-        <div style={styles.logo} onClick={() => setActivePage('home')}>
-          <span style={styles.logoIcon}>🐼</span>
-          <span style={styles.logoText}>PandaLearn</span>
+    <header className="header" style={{ ...styles.header, ...(theme === 'dark' ? styles.headerDark : {}) }}>
+      <div className="headerContent" style={styles.headerContent}>
+        <div className="logo" style={styles.logo} onClick={() => setActivePage('home')}>
+          <span className="logoIcon" style={styles.logoIcon}>🐼</span>
+          <span className="logoText" style={styles.logoText}>PandaLearn</span>
         </div>
         
         {/* 搜索框 */}
-        <div style={styles.searchContainer}>
+        <div className="searchContainer" style={styles.searchContainer}>
           <div style={styles.searchWrapper}>
             <span style={styles.searchIcon}>🔍</span>
             <input
@@ -229,6 +229,7 @@ export const Header = ({ activePage, setActivePage }) => {
               onChange={(e) => handleSearch(e.target.value)}
               onFocus={() => searchQuery && setShowResults(true)}
               onBlur={() => setTimeout(() => setShowResults(false), 200)}
+              className="searchInput"
               style={{ ...styles.searchInput, ...(theme === 'dark' ? styles.searchInputDark : {}) }}
             />
             {searchQuery && (
@@ -273,9 +274,9 @@ export const Header = ({ activePage, setActivePage }) => {
         </div>
         
         {/* 功能按钮组 */}
-        <div style={styles.utilityButtons}>
+        <div className="utilityButtons" style={styles.utilityButtons}>
           {/* 字体缩放 */}
-          <div style={styles.fontSizeControls}>
+          <div className="fontSizeControls" style={styles.fontSizeControls}>
             <button
               onClick={() => handleFontSizeChange(-0.1)}
               style={styles.fontButton}
@@ -296,17 +297,19 @@ export const Header = ({ activePage, setActivePage }) => {
           {/* 主题切换 */}
           <button
             onClick={toggleTheme}
+            className="themeButton"
             style={{ ...styles.themeButton, ...(theme === 'dark' ? styles.themeButtonDark : {}) }}
             title={theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
           >
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
           
-          <nav style={styles.nav}>
+          <nav className="nav" style={styles.nav}>
             {navItems.map(item => (
               <button
                 key={item.id}
                 onClick={() => setActivePage(item.id)}
+                className="navItem"
                 style={{
                   ...styles.navItem,
                   ...(activePage === item.id ? styles.navItemActive : {}),
@@ -553,3 +556,82 @@ const styles = {
     fontSize: '16px'
   }
 };
+
+// Header移动端响应式样式
+if (typeof window !== 'undefined') {
+  const headerMobileStyles = `
+    @media (max-width: 768px) {
+      .headerContent {
+        padding: 0 16px !important;
+        gap: 12px !important;
+      }
+      
+      .logo {
+        min-width: auto !important;
+      }
+      
+      .logoIcon {
+        font-size: 24px !important;
+      }
+      
+      .logoText {
+        font-size: 18px !important;
+      }
+      
+      .searchContainer {
+        min-width: 100% !important;
+        max-width: 100% !important;
+      }
+      
+      .searchInput {
+        padding: 10px 32px !important;
+        font-size: 14px !important;
+      }
+      
+      .utilityButtons {
+        gap: 10px !important;
+      }
+      
+      .nav {
+        gap: 4px !important;
+      }
+      
+      .navItem {
+        padding: 8px 10px !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .header {
+        padding: 10px 0 !important;
+      }
+      
+      .headerContent {
+        padding: 0 12px !important;
+        gap: 8px !important;
+      }
+      
+      .logoText {
+        font-size: 16px !important;
+      }
+      
+      .fontSizeControls {
+        display: none !important;
+      }
+      
+      .searchInput {
+        padding: 8px 28px !important;
+        font-size: 13px !important;
+      }
+      
+      .themeButton {
+        padding: 8px 10px !important;
+        font-size: 16px !important;
+      }
+    }
+  `;
+  
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = headerMobileStyles;
+  document.head.appendChild(styleSheet);
+}
