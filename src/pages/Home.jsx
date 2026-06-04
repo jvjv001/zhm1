@@ -45,6 +45,8 @@ const AnimatedCounter = ({ target, duration = 2000, suffix = '' }) => {
 
 export const Home = ({ setActivePage }) => {
   const [selectedProject, setSelectedProject] = useState(null);
+  const [projectCode, setProjectCode] = useState('');
+  const [projectOutput, setProjectOutput] = useState('');
   
   // 从localStorage读取练习数据
   const savedQuizAnswers = JSON.parse(localStorage.getItem('dailyQuizAnswers') || '{}');
@@ -201,28 +203,131 @@ sys.stdout = StringIO()
     }
   };
 
-  // 热门项目数据
+  // 运行项目代码
+  const handleRunProjectCode = async () => {
+    if (pyodideStatus !== "ready") {
+      setProjectOutput("⚠️ Python 环境还在加载中，请稍候...");
+      return;
+    }
+    
+    if (!projectCode.trim()) {
+      setProjectOutput("⚠️ 请先输入代码");
+      return;
+    }
+    
+    setProjectOutput("正在执行代码...\n");
+    
+    try {
+      pyodide.runPython(`
+import sys
+from io import StringIO
+sys.stdout = StringIO()
+`);
+      
+      await pyodide.runPythonAsync(projectCode);
+      
+      const stdout = pyodide.runPython("sys.stdout.getvalue()");
+      const result = stdout.trim();
+      
+      if (result) {
+        setProjectOutput(`✅ 执行成功！\n\n${result}`);
+      } else {
+        setProjectOutput(`✅ 执行成功！\n\n（代码已执行，但没有 print 输出）`);
+      }
+    } catch (err) {
+      setProjectOutput(`❌ 执行出错：\n\n${err.message || err}`);
+    }
+  };
+
+  // 选择项目时加载示例代码
+  const handleSelectProject = (project) => {
+    setSelectedProject(project);
+    setProjectCode(project.exampleCode || '');
+    setProjectOutput('');
+  };
+
+  // 热门项目数据 - 带预置代码
   const popularProjects = [
     {
       id: 1,
       title: '猜数字小游戏',
       description: '学习随机数生成和条件判断',
       icon: '🎲',
-      difficulty: '入门'
+      difficulty: '入门',
+      exampleCode: `import random
+
+# 生成1-100的随机数
+secret = random.randint(1, 100)
+print(f"我已经想好了一个1-100的数字！")
+
+attempts = 0
+while True:
+    guess = int(input("请输入你猜的数字: "))
+    attempts += 1
+    
+    if guess == secret:
+        print(f"🎉 恭喜你！猜对了！用了{attempts}次机会")
+        break
+    elif guess < secret:
+        print("太小了，再试试！")
+    else:
+        print("太大了，再试试！")`
     },
     {
       id: 2,
       title: '排行榜排序实现',
       description: '掌握多条件排序算法',
       icon: '🏆',
-      difficulty: '初级'
+      difficulty: '初级',
+      exampleCode: `import pandas as pd
+
+# 创建排行榜数据
+data = {
+    '姓名': ['张三', '李四', '王五', '赵六', '钱七'],
+    '分数': [95, 87, 92, 88, 95],
+    '通关时间': [120, 95, 150, 110, 100]
+}
+df = pd.DataFrame(data)
+
+# 按分数降序，分数相同按通关时间升序
+df_sorted = df.sort_values(
+    by=['分数', '通关时间'], 
+    ascending=[False, True]
+)
+
+print("🏆 排行榜：")
+print(df_sorted.to_string(index=False))`
     },
     {
       id: 3,
       title: '日历生成工具',
       description: '日期计算与格式化输出',
       icon: '📅',
-      difficulty: '初级'
+      difficulty: '初级',
+      exampleCode: `import datetime
+
+# 获取当前日期
+today = datetime.date.today()
+print(f"📅 今天是: {today}")
+
+# 生成指定月份的日历
+year, month = today.year, today.month
+first_day = datetime.date(year, month, 1)
+days_in_month = (datetime.date(year, month % 12 + 1, 1) - datetime.timedelta(days=1)).day
+
+print(f"\\n{year}年{month}月日历：")
+print("一 二 三 四 五 六 日")
+
+# 计算第一天是星期几 (0=周一)
+start_weekday = first_day.weekday()
+
+# 打印空格
+print("  " * start_weekday, end="")
+
+for day in range(1, days_in_month + 1):
+    print(f"{day:2} ", end="")
+    if (start_weekday + day) % 7 == 0:
+        print()  # 换行`
     }
   ];
 
@@ -505,7 +610,7 @@ sys.stdout = StringIO()
           {popularProjects.map((project, index) => (
             <div
               key={project.id}
-              onClick={() => setSelectedProject(project)}
+              onClick={() => handleSelectProject(project)}
               style={{
                 ...styles.projectCard,
                 ...(selectedProject?.id === project.id ? styles.projectCardActive : {})
@@ -527,8 +632,8 @@ sys.stdout = StringIO()
               <a
                 href="#0"
                 onClick={(e) => {
-                  e.preventDefault();
-                  setSelectedProject(project);
+                  e.stopPropagation();
+                  handleSelectProject(project);
                 }}
                 style={styles.viewDetailLink}
               >
@@ -549,6 +654,37 @@ sys.stdout = StringIO()
               </div>
             </div>
             <p style={styles.projectDetailDesc}>{selectedProject.description}</p>
+            
+            {/* 代码编辑器区域 */}
+            <div style={styles.projectCodeSection}>
+              <div style={styles.projectCodeHeader}>
+                <span>📝 代码编辑</span>
+                <button
+                  onClick={handleRunProjectCode}
+                  disabled={pyodideStatus !== "ready"}
+                  style={{
+                    ...styles.projectRunButton,
+                    ...(pyodideStatus !== "ready" ? styles.projectRunButtonDisabled : {})
+                  }}
+                >
+                  {pyodideStatus === "ready" ? "▶ 运行代码" : "⏳ 加载中..."}
+                </button>
+              </div>
+              <textarea
+                value={projectCode}
+                onChange={(e) => setProjectCode(e.target.value)}
+                style={styles.projectCodeEditor}
+                spellCheck={false}
+                placeholder="输入代码..."
+              />
+              <div style={styles.projectOutputSection}>
+                <div style={styles.projectOutputHeader}>输出结果</div>
+                <pre style={styles.projectOutputBox}>
+                  {projectOutput || "点击运行按钮查看输出..."}
+                </pre>
+              </div>
+            </div>
+            
             <div style={styles.projectDetailActions}>
               <button
                 onClick={() => setActivePage('projects')}
@@ -984,6 +1120,71 @@ const styles = {
     color: '#666',
     lineHeight: 1.8,
     marginBottom: '24px'
+  },
+  // 项目代码编辑器
+  projectCodeSection: {
+    background: '#fafafa',
+    borderRadius: '12px',
+    padding: '16px',
+    marginBottom: '24px',
+    border: '1px solid #e0e0e0'
+  },
+  projectCodeHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '12px',
+    fontWeight: 600,
+    color: '#333'
+  },
+  projectRunButton: {
+    padding: '8px 16px',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.3s ease'
+  },
+  projectRunButtonDisabled: {
+    background: '#ccc',
+    cursor: 'not-allowed'
+  },
+  projectCodeEditor: {
+    width: '100%',
+    height: '200px',
+    padding: '12px',
+    fontFamily: '"Courier New", Courier, monospace',
+    fontSize: '13px',
+    lineHeight: 1.5,
+    border: '2px solid #e0e0e0',
+    borderRadius: '8px',
+    background: '#fff',
+    resize: 'none',
+    marginBottom: '12px'
+  },
+  projectOutputSection: {
+    marginTop: '12px'
+  },
+  projectOutputHeader: {
+    fontWeight: 600,
+    color: '#333',
+    marginBottom: '8px'
+  },
+  projectOutputBox: {
+    minHeight: '120px',
+    margin: 0,
+    padding: '12px',
+    background: '#2d2d3a',
+    color: '#f0f0f0',
+    fontFamily: '"Courier New", Courier, monospace',
+    fontSize: '13px',
+    lineHeight: 1.5,
+    borderRadius: '8px',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word'
   },
   projectDetailActions: {
     display: 'flex',
