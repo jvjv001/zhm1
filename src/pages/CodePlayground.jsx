@@ -93,20 +93,28 @@ print(f"\\n\\n本月共有 {days_in_month} 天")`
         setStatus('loading');
         setOutput('⏳ 正在加载Python环境，请稍候...\\n（首次加载约需5-10秒）\\n');
         
+        // 检查是否已缓存
+        if (window.__pyodideInstance) {
+          pyodideRef.current = window.__pyodideInstance;
+          setIsReady(true);
+          setStatus('ready');
+          setOutput('✅ Python环境已就绪！\\n\\n点击"运行代码"开始执行。');
+          return;
+        }
+        
         const script = document.createElement('script');
         script.src = "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js";
         script.async = true;
         
         script.onload = async () => {
           try {
-            const pyodide = await window.loadPyodide();
+            const pyodide = await window.loadPyodide({
+              indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.1/full/'
+            });
             pyodideRef.current = pyodide;
+            window.__pyodideInstance = pyodide;
             setOutput('📦 正在安装数据分析库...\\n');
             await pyodide.loadPackage(['pandas', 'numpy']);
-            await pyodide.runPythonAsync(`
-              import sys
-              from io import StringIO
-            `);
             setIsReady(true);
             setStatus('ready');
             setOutput('✅ Python环境已就绪！\\n\\n点击"运行代码"开始执行。');
@@ -177,7 +185,7 @@ print(f"\\n\\n本月共有 {days_in_month} 天")`
     return errorStr;
   };
   
-  // 运行代码
+  // 运行代码 - 使用Pyodide的runPythonAsync直接执行
   const handleRunCode = useCallback(async () => {
     if (!isReady || isRunning) return;
     
@@ -186,21 +194,32 @@ print(f"\\n\\n本月共有 {days_in_month} 天")`
     
     try {
       const pyodide = pyodideRef.current;
-      const oldStdout = pyodide.runPython('sys.stdout');
-      const redirectStdout = pyodide.runPython(`
-        import sys
-        from io import StringIO
-        sys.stdout = StringIO()
-        sys.stdout
-      `);
       
-      await pyodide.runPythonAsync(code);
+      // 创建输出捕获函数
+      await pyodide.runPythonAsync(`
+import sys
+from io import StringIO
+
+def capture_output(code_str):
+    old_stdout = sys.stdout
+    sys.stdout = StringIO()
+    try:
+        exec(code_str)
+        return sys.stdout.getvalue()
+    finally:
+        sys.stdout = old_stdout
+`);
       
-      const result = pyodide.runPython('sys.stdout.getvalue()');
-      pyodide.runPython('sys.stdout = old_stdout', { globals: { old_stdout: oldStdout } });
+      // 设置代码字符串到Pyodide
+      pyodide.globals.set('user_code', code);
       
-      if (result) {
-        setOutput(`✅ 执行成功！\\n\\n${result}`);
+      // 执行并获取结果
+      const outputResult = await pyodide.runPythonAsync(`
+capture_output(user_code)
+`);
+      
+      if (outputResult && outputResult.trim()) {
+        setOutput(`✅ 执行成功！\\n\\n${outputResult}`);
       } else {
         setOutput('✅ 执行完成（无输出）');
       }
@@ -210,7 +229,7 @@ print(f"\\n\\n本月共有 {days_in_month} 天")`
         id: Date.now(),
         code: code,
         timestamp: new Date().toLocaleString('zh-CN'),
-        output: result || '无输出'
+        output: outputResult || '无输出'
       }, ...history.slice(0, 9)];
       setHistory(newHistory);
       localStorage.setItem(codeHistoryKey, JSON.stringify(newHistory));
