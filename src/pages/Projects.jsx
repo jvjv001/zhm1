@@ -167,11 +167,55 @@ sys.stdout = StringIO()
 
   const isProjectCompleted = (projectId) => completedProjects.includes(projectId);
 
+  // 项目难度等级配置
+  const difficultyConfig = {
+    '入门': { color: '#4caf50', bg: '#e8f5e9', icon: '🌱' },
+    '初级': { color: '#2196f3', bg: '#e3f2fd', icon: '🌿' },
+    '中级': { color: '#ff9800', bg: '#fff3e0', icon: '🌳' },
+    '高级': { color: '#f44336', bg: '#ffebee', icon: '🌲' }
+  };
+  
+  // 计算项目完成进度
+  const completedCount = completedProjects.length;
+  const totalProjects = projectsData.length;
+  const progressPercent = Math.round((completedCount / totalProjects) * 100);
+
   return (
     <div>
       <div className="card">
         <h2 style={{ marginBottom: '8px', color: '#333' }}>💻 编程项目</h2>
         <p style={{ color: '#666' }}>选择项目开始学习，每个项目包含详细的步骤指导和在线代码运行环境</p>
+        
+        {/* 项目进度统计 */}
+        <div style={{
+          marginTop: '16px',
+          padding: '16px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: '12px',
+          color: 'white'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ fontWeight: 600 }}>📊 项目完成进度</span>
+            <span style={{ fontSize: '18px', fontWeight: 700 }}>{completedCount}/{totalProjects}</span>
+          </div>
+          <div style={{
+            height: '8px',
+            background: 'rgba(255,255,255,0.3)',
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              width: `${progressPercent}%`,
+              height: '100%',
+              background: 'white',
+              borderRadius: '4px',
+              transition: 'width 0.5s ease'
+            }} />
+          </div>
+          <div style={{ marginTop: '8px', fontSize: '14px', opacity: 0.9 }}>
+            {progressPercent === 100 ? '🎉 已完成所有项目！' : `完成 ${progressPercent}%，继续加油！`}
+          </div>
+        </div>
       </div>
 
       <div className="card" style={{ marginTop: '16px' }}>
@@ -221,11 +265,27 @@ sys.stdout = StringIO()
                   {project.icon}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, color: '#333', marginBottom: '4px' }}>
-                    {project.title}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontWeight: 600, color: '#333' }}>
+                      {project.title}
+                    </span>
+                    {/* 难度等级标签 */}
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      background: (difficultyConfig[project.difficulty || '入门']?.bg || '#e8f5e9'),
+                      color: (difficultyConfig[project.difficulty || '入门']?.color || '#4caf50')
+                    }}>
+                      {difficultyConfig[project.difficulty || '入门']?.icon || '🌱'} {project.difficulty || '入门'}
+                    </span>
                   </div>
                   <div style={{ fontSize: '13px', color: '#666', lineHeight: 1.5 }}>
                     {project.description}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                    {project.tasks.length} 个任务
                   </div>
                 </div>
               </div>

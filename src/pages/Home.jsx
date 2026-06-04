@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { courseContent } from '../data';
+import { CollapsibleSection } from '../components/CollapsibleSection';
 
 // 数字滚动动画组件
 const AnimatedCounter = ({ target, duration = 2000, suffix = '' }) => {
@@ -43,10 +44,54 @@ const AnimatedCounter = ({ target, duration = 2000, suffix = '' }) => {
   );
 };
 
-export const Home = ({ setActivePage }) => {
+export const Home = ({ setActivePage, onOpenCodePlayground }) => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [projectCode, setProjectCode] = useState('');
   const [projectOutput, setProjectOutput] = useState('');
+  const [activeAnchor, setActiveAnchor] = useState('');
+  
+  // 监听滚动，更新当前锚点
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = ['hero', 'features', 'stats', 'learning-path', 'daily-quiz', 'popular-projects', 'code-runner'];
+      let current = '';
+      
+      for (const section of sections) {
+        const element = document.getElementById(section);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          if (rect.top <= 100 && rect.bottom >= 100) {
+            current = section;
+            break;
+          }
+        }
+      }
+      setActiveAnchor(current);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  
+  // 锚点跳转
+  const scrollToSection = (sectionId) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+      setActiveAnchor(sectionId);
+    }
+  };
+  
+  // 侧边锚点目录数据
+  const anchorItems = [
+    { id: 'hero', label: '首页', icon: '🏠' },
+    { id: 'features', label: '平台特色', icon: '✨' },
+    { id: 'stats', label: '数据统计', icon: '📊' },
+    { id: 'learning-path', label: '学习路线', icon: '🚀' },
+    { id: 'daily-quiz', label: '每日一练', icon: '📝' },
+    { id: 'popular-projects', label: '热门项目', icon: '🎯' },
+    { id: 'code-runner', label: '在线体验', icon: '🐍' }
+  ];
   
   // 从localStorage读取练习数据
   const savedQuizAnswers = JSON.parse(localStorage.getItem('dailyQuizAnswers') || '{}');
@@ -258,12 +303,16 @@ sys.stdout = StringIO()
 
 # 生成1-100的随机数
 secret = random.randint(1, 100)
-print(f"我已经想好了一个1-100的数字！")
+print(f"🎲 我已经想好了一个1-100的数字！")
+print(f"（提示：答案是 {secret}）")
 
+# 使用预设的猜测序列进行演示
+test_guesses = [50, 75, 63, secret]
 attempts = 0
-while True:
-    guess = int(input("请输入你猜的数字: "))
+
+for guess in test_guesses:
     attempts += 1
+    print(f"\\n猜数字: {guess}")
     
     if guess == secret:
         print(f"🎉 恭喜你！猜对了！用了{attempts}次机会")
@@ -369,8 +418,27 @@ for day in range(1, days_in_month + 1):
 
   return (
     <div style={styles.container}>
+      {/* 侧边锚点目录 */}
+      <aside className="sideAnchor" style={styles.sideAnchor}>
+        <div style={styles.sideAnchorHeader}>目录导航</div>
+        {anchorItems.map(item => (
+          <button
+            key={item.id}
+            onClick={() => scrollToSection(item.id)}
+            style={{
+              ...styles.sideAnchorItem,
+              ...(activeAnchor === item.id ? styles.sideAnchorItemActive : {})
+            }}
+            title={item.label}
+          >
+            <span style={styles.sideAnchorIcon}>{item.icon}</span>
+            <span style={styles.sideAnchorLabel}>{item.label}</span>
+          </button>
+        ))}
+      </aside>
+      
       {/* Hero区域 */}
-      <section style={styles.hero}>
+      <section id="hero" style={styles.hero}>
         <div style={styles.heroContent}>
           <h1 style={styles.heroTitle}>商务数据分析在线教育平台</h1>
           <p style={styles.heroSubtitle}>从零开始，掌握Pandas数据分析核心技能</p>
@@ -413,7 +481,7 @@ for day in range(1, days_in_month + 1):
       </section>
 
       {/* 平台特色 */}
-      <section style={styles.section}>
+      <section id="features" style={styles.section}>
         <h2 style={styles.sectionTitle}>平台特色</h2>
         <div style={styles.featureGrid}>
           {features.map((feature, index) => (
@@ -443,53 +511,72 @@ for day in range(1, days_in_month + 1):
       </section>
 
       {/* 学习数据统计 - 大字体统计卡片 */}
-      <section style={styles.statsSection}>
+      <section id="stats" style={styles.statsSection}>
+        <div style={styles.statsHeader}>
+          <h2 style={styles.statsTitle}>📊 学习数据统计</h2>
+        </div>
         <div style={styles.statsContainer}>
           <div style={styles.statCard}>
+            <div style={styles.statIcon}>📚</div>
             <div style={styles.statNumber}>
-              <AnimatedCounter target={12} suffix="个" />
+              <AnimatedCounter target={12} suffix="+" />
             </div>
             <div style={styles.statLabel}>知识点</div>
+            <div style={styles.statDesc}>系统学习模块</div>
           </div>
           <div style={styles.statCard}>
+            <div style={styles.statIcon}>💻</div>
             <div style={styles.statNumber}>
-              <AnimatedCounter target={10} suffix="个" />
+              <AnimatedCounter target={10} suffix="+" />
             </div>
             <div style={styles.statLabel}>编程项目</div>
+            <div style={styles.statDesc}>实战练习项目</div>
           </div>
           <div style={styles.statCard}>
+            <div style={styles.statIcon}>📝</div>
             <div style={styles.statNumber}>
-              <AnimatedCounter target={3} suffix="+道" />
+              <AnimatedCounter target={60} suffix="+" />
             </div>
-            <div style={styles.statLabel}>每日练习</div>
+            <div style={styles.statLabel}>练习题</div>
+            <div style={styles.statDesc}>知识巩固训练</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statIcon}>🎯</div>
+            <div style={styles.statNumber}>
+              <AnimatedCounter target={3} suffix="道/天" />
+            </div>
+            <div style={styles.statLabel}>每日一练</div>
+            <div style={styles.statDesc}>持续学习计划</div>
           </div>
         </div>
       </section>
 
       {/* 学习路线 */}
-      <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>学习路线</h2>
-        <div style={styles.learningPathContainer}>
-          {learningSteps.map((item, index) => (
-            <React.Fragment key={item.step}>
-              <div style={styles.learningStep}>
-                <div style={styles.stepIcon}>{item.icon}</div>
-                <div style={styles.stepNumber}>第{item.step}步</div>
-                <div style={styles.stepTitle}>{item.title}</div>
-                <div style={styles.stepDesc}>{item.desc}</div>
-              </div>
-              {index < learningSteps.length - 1 && (
-                <div style={styles.stepArrow}>→</div>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
+      <section id="learning-path" style={styles.section}>
+        <CollapsibleSection title="🚀 学习路线" icon="🚀" defaultOpen={true}>
+          <div style={styles.learningPathContainer}>
+            {learningSteps.map((item, index) => (
+              <React.Fragment key={item.step}>
+                <div style={styles.learningStep}>
+                  <div style={styles.stepIcon}>{item.icon}</div>
+                  <div style={styles.stepNumber}>第{item.step}步</div>
+                  <div style={styles.stepTitle}>{item.title}</div>
+                  <div style={styles.stepDesc}>{item.desc}</div>
+                </div>
+                {index < learningSteps.length - 1 && (
+                  <div style={styles.stepArrow}>→</div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </CollapsibleSection>
       </section>
 
       {/* 每日一练 */}
-      <section style={styles.section}>
-        <div style={styles.quizHeader}>
-          <h2 style={styles.sectionTitle}>📝 每日一练</h2>
+      <section id="daily-quiz" style={styles.section}>
+        <CollapsibleSection title="📝 每日一练" icon="📝" defaultOpen={true}>
+          <div style={styles.quizHeader}>
+            <h2 style={styles.sectionTitle}>📝 每日一练</h2>
           <div style={styles.quizHeaderRight}>
             <div style={styles.quizProgress}>
               <span style={styles.quizProgressIcon}>
@@ -601,11 +688,13 @@ for day in range(1, days_in_month + 1):
             );
           })}
         </div>
+          </CollapsibleSection>
       </section>
 
       {/* 热门项目预览 */}
-      <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>热门项目</h2>
+      <section id="popular-projects" style={styles.section}>
+        <CollapsibleSection title="🎯 热门项目" icon="🎯" defaultOpen={true}>
+          <h2 style={styles.sectionTitle}>热门项目</h2>
         <div style={styles.projectGrid}>
           {popularProjects.map((project, index) => (
             <div
@@ -687,6 +776,23 @@ for day in range(1, days_in_month + 1):
             
             <div style={styles.projectDetailActions}>
               <button
+                onClick={() => {
+                  setSelectedProject(null);
+                  onOpenCodePlayground && onOpenCodePlayground(selectedProject.id);
+                }}
+                style={{ ...styles.projectDetailButton, ...styles.projectCodePageButton }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(76, 175, 80, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(76, 175, 80, 0.2)';
+                }}
+              >
+                🚀 打开专属代码页面
+              </button>
+              <button
                 onClick={() => setActivePage('projects')}
                 style={styles.projectDetailButton}
                 onMouseEnter={(e) => {
@@ -726,11 +832,13 @@ for day in range(1, days_in_month + 1):
             查看全部项目 →
           </button>
         </div>
+          </CollapsibleSection>
       </section>
 
       {/* 在线代码运行演示 */}
-      <section style={styles.section}>
-        <h2 style={styles.sectionTitle}>🐍 在线体验区</h2>
+      <section id="code-runner" style={styles.section}>
+        <CollapsibleSection title="🐍 在线体验区" icon="🐍" defaultOpen={true}>
+          <h2 style={styles.sectionTitle}>🐍 在线体验区</h2>
         <div style={styles.codeRunnerContainer}>
           <div style={styles.codeEditorSection}>
             <div style={styles.codeEditorHeader}>
@@ -757,6 +865,7 @@ for day in range(1, days_in_month + 1):
         <p style={styles.codeRunnerNote}>
           ✅ 真实 Python 环境（支持 Pandas、Numpy 等库）
         </p>
+          </CollapsibleSection>
       </section>
 
       {/* 页脚 */}
@@ -934,37 +1043,64 @@ const styles = {
   },
   // 学习数据统计 - 大字体卡片
   statsSection: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
     padding: '60px 24px',
-    margin: '20px 0'
+    margin: '20px 0',
+    borderRadius: '24px',
+    position: 'relative',
+    overflow: 'hidden'
+  },
+  statsHeader: {
+    textAlign: 'center',
+    marginBottom: '32px'
+  },
+  statsTitle: {
+    fontSize: '28px',
+    fontWeight: 700,
+    color: 'white',
+    textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
   },
   statsContainer: {
-    maxWidth: '1000px',
+    maxWidth: '1200px',
     margin: '0 auto',
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '30px',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '24px',
     textAlign: 'center'
   },
   statCard: {
-    background: 'rgba(255, 255, 255, 0.15)',
-    backdropFilter: 'blur(10px)',
+    background: 'rgba(255, 255, 255, 0.12)',
+    backdropFilter: 'blur(15px)',
     borderRadius: '20px',
-    padding: '32px 24px',
-    border: '1px solid rgba(255, 255, 255, 0.2)'
+    padding: '32px 20px',
+    border: '1px solid rgba(255, 255, 255, 0.18)',
+    transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+  },
+  statIcon: {
+    fontSize: '36px',
+    marginBottom: '12px',
+    display: 'block'
   },
   statNumber: {
-    fontSize: 'clamp(42px, 6vw, 56px)',
+    fontSize: 'clamp(40px, 5vw, 52px)',
     fontWeight: 700,
     color: 'white',
     lineHeight: 1.2,
-    textShadow: '0 2px 10px rgba(0, 0, 0, 0.1)'
+    textShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+    display: 'block'
   },
   statLabel: {
     fontSize: '18px',
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.95)',
     marginTop: '8px',
-    fontWeight: 500
+    fontWeight: 600,
+    display: 'block'
+  },
+  statDesc: {
+    fontSize: '13px',
+    color: 'rgba(255, 255, 255, 0.75)',
+    marginTop: '4px',
+    display: 'block'
   },
   // 学习路线
   learningPathContainer: {
@@ -1202,6 +1338,10 @@ const styles = {
     cursor: 'pointer',
     transition: 'all 0.3s ease',
     boxShadow: '0 4px 15px rgba(102, 126, 234, 0.2)'
+  },
+  projectCodePageButton: {
+    background: 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)',
+    boxShadow: '0 4px 15px rgba(76, 175, 80, 0.2)'
   },
   projectDetailCloseButton: {
     padding: '14px 32px',
@@ -1524,5 +1664,239 @@ const styles = {
     color: '#888',
     fontSize: '14px',
     marginTop: '16px'
+  },
+  // 侧边锚点目录
+  sideAnchor: {
+    position: 'fixed',
+    right: '20px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '16px',
+    padding: '16px 8px',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+    zIndex: 99,
+    border: '1px solid #e0e0e0',
+    display: 'none'
+  },
+  sideAnchorHeader: {
+    fontSize: '11px',
+    fontWeight: 600,
+    color: '#999',
+    textAlign: 'center',
+    padding: '8px 12px',
+    marginBottom: '8px',
+    borderBottom: '1px solid #f0f0f0'
+  },
+  sideAnchorItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 12px',
+    border: 'none',
+    background: 'transparent',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    width: '100%',
+    textAlign: 'left'
+  },
+  sideAnchorItemActive: {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white'
+  },
+  sideAnchorIcon: {
+    fontSize: '14px'
+  },
+  sideAnchorLabel: {
+    fontSize: '12px',
+    fontWeight: 500,
+    color: '#666'
   }
 };
+
+// 响应式样式
+const mobileStyles = `
+  @media (min-width: 1024px) {
+    .sideAnchor {
+      display: block !important;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .hero {
+      padding: 60px 16px 80px !important;
+    }
+    
+    .heroTitle {
+      font-size: 28px !important;
+    }
+    
+    .heroSubtitle {
+      font-size: 16px !important;
+    }
+    
+    .section {
+      padding: 40px 16px !important;
+    }
+    
+    .sectionTitle {
+      font-size: 24px !important;
+      margin-bottom: 24px !important;
+    }
+    
+    .featureGrid {
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+    }
+    
+    .featureCard {
+      padding: 24px 16px !important;
+    }
+    
+    .statsContainer {
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 16px !important;
+    }
+    
+    .statCard {
+      padding: 20px 12px !important;
+    }
+    
+    .statNumber {
+      font-size: 28px !important;
+    }
+    
+    .statLabel {
+      font-size: 14px !important;
+    }
+    
+    .learningPathContainer {
+      flex-direction: column !important;
+      align-items: stretch !important;
+    }
+    
+    .learningStep {
+      max-width: 100% !important;
+      margin-bottom: 16px !important;
+    }
+    
+    .stepArrow {
+      display: none !important;
+    }
+    
+    .projectGrid {
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+    }
+    
+    .projectCard {
+      padding: 24px 16px !important;
+    }
+    
+    .codeRunnerContainer {
+      grid-template-columns: 1fr !important;
+    }
+    
+    .codeEditor, .outputBox {
+      height: 200px !important;
+      min-height: 200px !important;
+    }
+    
+    .quizCard {
+      padding: 20px !important;
+    }
+    
+    .quizQuestion {
+      font-size: 16px !important;
+    }
+    
+    .quizOption {
+      padding: 12px 14px !important;
+    }
+    
+    .quizOptionLabel {
+      font-size: 14px !important;
+    }
+    
+    .navItem span:last-child {
+      display: none;
+    }
+    
+    .navItem {
+      padding: 10px 12px !important;
+    }
+    
+    .searchContainer {
+      min-width: 100% !important;
+      max-width: 100% !important;
+      order: 3;
+    }
+    
+    .headerContent {
+      flex-wrap: wrap !important;
+    }
+    
+    .utilityButtons {
+      order: 2;
+    }
+    
+    .logo {
+      order: 1;
+    }
+    
+    .fontSizeControls {
+      display: none !important;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .heroTitle {
+      font-size: 24px !important;
+      line-height: 1.2 !important;
+    }
+    
+    .section {
+      padding: 30px 12px !important;
+    }
+    
+    .sectionTitle {
+      font-size: 20px !important;
+    }
+    
+    .statsContainer {
+      grid-template-columns: 1fr !important;
+    }
+    
+    .statCard {
+      padding: 16px !important;
+    }
+    
+    .primaryButton, .secondaryButton {
+      padding: 12px 24px !important;
+      font-size: 16px !important;
+    }
+    
+    .quizHeader {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+    }
+    
+    .projectDetailPanel {
+      padding: 20px !important;
+    }
+    
+    .projectDetailButton, .projectDetailCloseButton {
+      padding: 10px 20px !important;
+      font-size: 14px !important;
+    }
+  }
+`;
+
+// 注入响应式样式
+if (typeof window !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = mobileStyles;
+  document.head.appendChild(styleSheet);
+}

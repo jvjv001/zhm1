@@ -4,6 +4,7 @@ export const projectsData = [
     id: 1,
     title: '猜数字小游戏',
     icon: '🎮',
+    difficulty: '入门',
     description: '实现经典的猜数字游戏，锻炼逻辑思维和循环控制能力',
     scenario: '你要开发一个猜数字游戏。程序会随机生成1-100之间的数字，用户需要通过猜数字来找到正确答案，程序会给出"大了"或"小了"的提示。',
     tasks: [
@@ -228,6 +229,7 @@ if __name__ == '__main__':
     id: 2,
     title: '排行榜排序实现',
     icon: '🏆',
+    difficulty: '初级',
     description: '学习使用不同排序算法实现排行榜功能',
     scenario: '你需要为游戏开发一个排行榜系统。玩家的分数数据已经收集好了，现在需要按照分数从高到低排序，如果分数相同则按玩家姓名排序。',
     tasks: [
@@ -489,6 +491,7 @@ if __name__ == '__main__':
     id: 3,
     title: '模拟购物结算',
     icon: '🛒',
+    difficulty: '初级',
     description: '实现购物车和结算功能，学习数据处理和流程控制',
     scenario: '你在开发一个购物网站的后台系统。需要实现商品展示、加入购物车、计算总价、应用折扣、最后生成订单的完整流程。',
     tasks: [
@@ -779,6 +782,7 @@ if __name__ == '__main__':
     id: 4,
     title: '人员信息排序',
     icon: '👥',
+    difficulty: '中级',
     description: '学习对包含多个字段的人员信息进行复杂排序',
     scenario: 'HR系统需要按照多个字段对员工进行排序：先按部门分组，同部门内按入职日期排序，同日期按姓名排序。',
     tasks: [
@@ -1032,6 +1036,7 @@ if __name__ == '__main__':
     id: 5,
     title: '数据走势模拟',
     icon: '📈',
+    difficulty: '中级',
     description: '使用随机数模拟股票价格走势，学习数据生成和可视化',
     scenario: '你需要模拟股票价格走势数据，用于测试交易系统。生成包含开盘价、收盘价、最高价、最低价的数据。',
     tasks: [
@@ -1429,6 +1434,7 @@ if __name__ == '__main__':
     id: 6,
     title: '概率模拟实验',
     icon: '🎲',
+    difficulty: '中级',
     description: '通过蒙特卡洛模拟学习概率论概念',
     scenario: '用代码模拟抛硬币、掷骰子等概率实验，验证概率论定理，如大数定律。',
     tasks: [
@@ -1742,6 +1748,7 @@ if __name__ == '__main__':
     id: 7,
     title: '日历生成工具',
     icon: '📅',
+    difficulty: '入门',
     description: '学习datetime模块，生成日历和日期计算',
     scenario: '你需要开发一个日历工具，可以显示某年某月的日历，计算任意两天之间的天数差。',
     tasks: [
@@ -2058,6 +2065,7 @@ if __name__ == '__main__':
     id: 8,
     title: '字符串处理工具',
     icon: '🔤',
+    difficulty: '初级',
     description: '学习Python字符串处理，实现文本分析和格式化',
     scenario: '你需要开发一个文本分析工具，统计字符数、单词数、出现频率最高的词等。',
     tasks: [
@@ -2338,6 +2346,7 @@ if __name__ == '__main__':
     id: 9,
     title: '数据纠错校验',
     icon: '✓',
+    difficulty: '高级',
     description: '学习数据校验方法，实现常见的校验算法',
     scenario: '需要实现数据校验功能，验证身份证号、手机号、银行卡号的合法性。',
     tasks: [
@@ -2663,6 +2672,7 @@ ISBN-13校验:
     id: 10,
     title: '数组数据拼接',
     icon: '🔗',
+    difficulty: '高级',
     description: '学习数组的合并、拼接和重组操作',
     scenario: '你需要将多个数据数组合并，按特定规则拼接，实现数据整理功能。',
     tasks: [

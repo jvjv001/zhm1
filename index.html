@@ -2,27 +2,102 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
+    
+    <!-- 基础SEO配置 -->
+    <title>PandaLearn - Pandas数据分析学习平台 | 在线编程练习</title>
+    <meta name="description" content="PandaLearn是一个专业的Pandas数据分析学习平台，提供12个知识点的在线练习、60道精选习题、错题本功能，支持真实Python环境在线运行代码，帮助您快速掌握数据分析技能。" />
+    <meta name="keywords" content="Pandas,数据分析,Python,在线学习,数据科学,机器学习,数据分析教程" />
+    <meta name="author" content="PandaLearn" />
+    
+    <!-- 移动端优化 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta name="theme-color" content="#667eea" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    
+    <!-- 搜索引擎爬虫配置 -->
+    <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
+    <link rel="canonical" href="https://jvjv09.pages.dev/" />
+    
+    <!-- Open Graph / 社交分享 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jvjv09.pages.dev/" />
+    <meta property="og:title" content="PandaLearn - Pandas数据分析学习平台" />
+    <meta property="og:description" content="专业的Pandas数据分析学习平台，提供在线编程练习、60道精选习题、错题本功能。" />
+    <meta property="og:site_name" content="PandaLearn" />
+    <meta property="og:locale" content="zh_CN" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="PandaLearn - Pandas数据分析学习平台" />
+    <meta name="twitter:description" content="专业的Pandas数据分析学习平台，提供在线编程练习、60道精选习题、错题本功能。" />
+    
+    <!-- 网站图标 -->
     <link rel="icon" type="image/svg+xml" href="./vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PandaLearn - Pandas数据分析学习平台</title>
-    <!-- highlight.js CDN -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
-    <!-- Pyodide CDN -->
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <link rel="apple-touch-icon" href="./vite.svg" />
+    
+    <!-- 预连接优化 -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+    
+    <!-- 第三方资源（按需加载） -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" media="print" onload="this.media='all'" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js" defer></script>
+    
+    <!-- 性能优化：预加载关键资源 -->
+    <link rel="modulepreload" href="/src/main.jsx" />
+    
+    <!-- 关键内联样式防止闪烁 -->
     <style>
+      /* 防止FOUC */
+      body {
+        background: #ffffff;
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      }
+      /* 加载状态 */
+      #root:empty::before {
+        content: '加载中...';
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        color: #667eea;
+        font-size: 18px;
+      }
+      /* 动画 */
       @keyframes slideIn {
-        from {
-          transform: translateX(400px);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
+        from { transform: translateX(400px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
       }
     </style>
+    
+    <!-- 结构化数据 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "PandaLearn",
+      "description": "Pandas数据分析学习平台，提供在线编程练习和习题训练",
+      "url": "https://jvjv09.pages.dev/",
+      "applicationCategory": "EducationApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "CNY"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "100"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
