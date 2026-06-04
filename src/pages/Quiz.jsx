@@ -8,6 +8,7 @@ export const Quiz = () => {
   const [submitted, setSubmitted] = useState({});
   const [mistakeBook, setMistakeBook] = useState([]);
   const [practiceHistory, setPracticeHistory] = useState([]);
+  const [selectedType, setSelectedType] = useState('all'); // 'all', 'single', 'multiple', 'truefalse'
 
   // 从localStorage加载数据
   useEffect(() => {
@@ -26,23 +27,62 @@ export const Quiz = () => {
     localStorage.setItem('practiceHistory', JSON.stringify(practiceHistory));
   }, [practiceHistory]);
 
+  // 清理答案字符串：去除首尾空格、首尾引号
+  const cleanAnswer = (str) => {
+    if (typeof str !== 'string') return str;
+    let cleaned = str.trim();
+    // 去除首尾双引号
+    if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+      cleaned = cleaned.slice(1, -1);
+    }
+    // 去除首尾单引号
+    if (cleaned.startsWith("'") && cleaned.endsWith("'")) {
+      cleaned = cleaned.slice(1, -1);
+    }
+    return cleaned.trim();
+  };
+
   const selectTopic = (topic) => {
     setSelectedTopic(topic);
     setActiveTab('quiz');
+    setSelectedType('all');
   };
 
+  // 单选题/判断题选择答案
   const selectAnswer = (questionId, optionIndex) => {
     if (submitted[questionId]) return;
     setUserAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
   };
 
+  // 多选题选择答案
+  const selectMultipleAnswer = (questionId, optionIndex) => {
+    if (submitted[questionId]) return;
+    setUserAnswers(prev => {
+      const current = prev[questionId] || [];
+      const newAnswers = current.includes(optionIndex)
+        ? current.filter(i => i !== optionIndex)
+        : [...current, optionIndex];
+      return { ...prev, [questionId]: newAnswers };
+    });
+  };
+
   const submitQuestion = (question) => {
     const questionId = question.id;
-    if (userAnswers[questionId] === undefined) return;
+    let isCorrect = false;
+
+    if (question.type === 'multiple') {
+      // 多选题：所有选项完全匹配才算正确
+      const userAns = userAnswers[questionId] || [];
+      const correctAns = question.correct || [];
+      isCorrect = userAns.length === correctAns.length && 
+                  userAns.every(i => correctAns.includes(i));
+    } else if (question.type === 'truefalse') {
+      isCorrect = userAnswers[questionId] === question.correct;
+    } else {
+      isCorrect = userAnswers[questionId] === question.correct;
+    }
 
     setSubmitted(prev => ({ ...prev, [questionId]: true }));
-
-    const isCorrect = userAnswers[questionId] === question.correct;
 
     // 记录做题历史
     const historyItem = {
@@ -54,6 +94,7 @@ export const Quiz = () => {
       userAnswer: userAnswers[questionId],
       correctAnswer: question.correct,
       isCorrect,
+      type: question.type,
       timestamp: new Date().toLocaleString('zh-CN')
     };
 
@@ -110,6 +151,15 @@ export const Quiz = () => {
     return { total, correct };
   };
 
+  const getTypeLabel = (type) => {
+    switch (type) {
+      case 'single': return '【单选】';
+      case 'truefalse': return '【判断】';
+      case 'multiple': return '【多选】';
+      default: return '';
+    }
+  };
+
   const renderTopicsList = () => (
     <div>
       <h2 style={styles.sectionTitle}>📚 知识点章节</h2>
@@ -139,11 +189,247 @@ export const Quiz = () => {
     </div>
   );
 
+  const renderSingleQuestion = (question, qIndex) => {
+    const isSubmitted = submitted[question.id];
+    const userAnswer = userAnswers[question.id];
+    const isCorrect = userAnswer === question.correct;
+
+    return (
+      <div key={question.id} style={styles.questionCard}>
+        <div style={styles.questionHeader}>
+          <span style={styles.typeTag}>【单选】</span>
+          <span style={styles.questionNumber}>第 {qIndex + 1} 题</span>
+          {isSubmitted && (
+            <span style={{
+              ...styles.questionStatus,
+              color: isCorrect ? '#4caf50' : '#f44336'
+            }}>
+              {isCorrect ? '✅ 正确' : '❌ 错误'}
+            </span>
+          )}
+        </div>
+        <h3 style={styles.questionText}>{question.question}</h3>
+        <div style={styles.optionsList}>
+          {question.options.map((option, oIndex) => {
+            let optionStyle = { ...styles.option };
+            if (isSubmitted) {
+              if (oIndex === question.correct) {
+                optionStyle = { ...optionStyle, ...styles.optionCorrect };
+              } else if (oIndex === userAnswer && oIndex !== question.correct) {
+                optionStyle = { ...optionStyle, ...styles.optionWrong };
+              }
+            } else if (userAnswer === oIndex) {
+              optionStyle = { ...optionStyle, ...styles.optionSelected };
+            }
+
+            return (
+              <button
+                key={oIndex}
+                onClick={() => selectAnswer(question.id, oIndex)}
+                style={optionStyle}
+                disabled={isSubmitted}
+              >
+                <span style={styles.optionLabel}>{String.fromCharCode(65 + oIndex)}.</span>
+                <span>{option}</span>
+                {isSubmitted && oIndex === question.correct && ' ✓'}
+                {isSubmitted && userAnswer === oIndex && oIndex !== question.correct && ' ✗'}
+              </button>
+            );
+          })}
+        </div>
+
+        {!isSubmitted && (
+          <button
+            onClick={() => submitQuestion(question)}
+            disabled={userAnswer === undefined}
+            style={{
+              ...styles.submitButton,
+              ...(userAnswer === undefined ? styles.submitButtonDisabled : {})
+            }}
+          >
+            提交答案
+          </button>
+        )}
+
+        {isSubmitted && (
+          <div style={{
+            ...styles.explanation,
+            ...(isCorrect ? styles.explanationCorrect : styles.explanationWrong)
+          }}>
+            <p style={styles.explanationText}>{question.explanation}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderTrueFalseQuestion = (question, qIndex) => {
+    const isSubmitted = submitted[question.id];
+    const userAnswer = userAnswers[question.id];
+    const isCorrect = userAnswer === question.correct;
+
+    return (
+      <div key={question.id} style={styles.questionCard}>
+        <div style={styles.questionHeader}>
+          <span style={styles.typeTag}>【判断】</span>
+          <span style={styles.questionNumber}>第 {qIndex + 1} 题</span>
+          {isSubmitted && (
+            <span style={{
+              ...styles.questionStatus,
+              color: isCorrect ? '#4caf50' : '#f44336'
+            }}>
+              {isCorrect ? '✅ 正确' : '❌ 错误'}
+            </span>
+          )}
+        </div>
+        <h3 style={styles.questionText}>{question.question}</h3>
+        <div style={styles.trueFalseOptions}>
+          <button
+            onClick={() => selectAnswer(question.id, true)}
+            style={{
+              ...styles.trueFalseButton,
+              ...(userAnswer === true ? styles.optionSelected : {}),
+              ...(isSubmitted && question.correct === true ? styles.optionCorrect : {}),
+              ...(isSubmitted && userAnswer === true && userAnswer !== question.correct ? styles.optionWrong : {})
+            }}
+            disabled={isSubmitted}
+          >
+            ✓ 正确
+          </button>
+          <button
+            onClick={() => selectAnswer(question.id, false)}
+            style={{
+              ...styles.trueFalseButton,
+              ...(userAnswer === false ? styles.optionSelected : {}),
+              ...(isSubmitted && question.correct === false ? styles.optionCorrect : {}),
+              ...(isSubmitted && userAnswer === false && userAnswer !== question.correct ? styles.optionWrong : {})
+            }}
+            disabled={isSubmitted}
+          >
+            ✗ 错误
+          </button>
+        </div>
+
+        {!isSubmitted && (
+          <button
+            onClick={() => submitQuestion(question)}
+            disabled={userAnswer === undefined}
+            style={{
+              ...styles.submitButton,
+              ...(userAnswer === undefined ? styles.submitButtonDisabled : {})
+            }}
+          >
+            提交答案
+          </button>
+        )}
+
+        {isSubmitted && (
+          <div style={{
+            ...styles.explanation,
+            ...(isCorrect ? styles.explanationCorrect : styles.explanationWrong)
+          }}>
+            <p style={styles.explanationText}>{question.explanation}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderMultipleQuestion = (question, qIndex) => {
+    const isSubmitted = submitted[question.id];
+    const userAnswer = userAnswers[question.id] || [];
+    const correctAns = question.correct || [];
+    const isCorrect = userAnswer.length === correctAns.length && 
+                      userAnswer.every(i => correctAns.includes(i));
+
+    return (
+      <div key={question.id} style={styles.questionCard}>
+        <div style={styles.questionHeader}>
+          <span style={{...styles.typeTag, background: '#ff9800'}}>【多选】</span>
+          <span style={styles.questionNumber}>第 {qIndex + 1} 题</span>
+          {isSubmitted && (
+            <span style={{
+              ...styles.questionStatus,
+              color: isCorrect ? '#4caf50' : '#f44336'
+            }}>
+              {isCorrect ? '✅ 正确' : '❌ 错误'}
+            </span>
+          )}
+        </div>
+        <h3 style={styles.questionText}>{question.question}</h3>
+        <div style={styles.optionsList}>
+          {question.options.map((option, oIndex) => {
+            const isSelected = userAnswer.includes(oIndex);
+            const isCorrectOption = correctAns.includes(oIndex);
+            
+            let optionStyle = { ...styles.option };
+            if (isSubmitted) {
+              if (isCorrectOption) {
+                optionStyle = { ...optionStyle, ...styles.optionCorrect };
+              } else if (isSelected && !isCorrectOption) {
+                optionStyle = { ...optionStyle, ...styles.optionWrong };
+              }
+            } else if (isSelected) {
+              optionStyle = { ...optionStyle, ...styles.optionSelected };
+            }
+
+            return (
+              <button
+                key={oIndex}
+                onClick={() => selectMultipleAnswer(question.id, oIndex)}
+                style={optionStyle}
+                disabled={isSubmitted}
+              >
+                <span style={styles.optionLabel}>{String.fromCharCode(65 + oIndex)}.</span>
+                <span>{option}</span>
+                {isSubmitted && isCorrectOption && ' ✓'}
+                {isSubmitted && isSelected && !isCorrectOption && ' ✗'}
+              </button>
+            );
+          })}
+        </div>
+
+        {!isSubmitted && (
+          <button
+            onClick={() => submitQuestion(question)}
+            disabled={userAnswer.length === 0}
+            style={{
+              ...styles.submitButton,
+              ...(userAnswer.length === 0 ? styles.submitButtonDisabled : {})
+            }}
+          >
+            提交答案
+          </button>
+        )}
+
+        {isSubmitted && (
+          <div style={{
+            ...styles.explanation,
+            ...(isCorrect ? styles.explanationCorrect : styles.explanationWrong)
+          }}>
+            <p style={styles.explanationText}>{question.explanation}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderQuiz = () => {
     if (!selectedTopic) return null;
-    const correctCount = selectedTopic.questions.filter(q =>
-      submitted[q.id] && userAnswers[q.id] === q.correct
+
+    const submittedCount = Object.keys(submitted).filter(id =>
+      selectedTopic.questions.find(q => q.id === id)
     ).length;
+
+    // 根据筛选类型过滤题目
+    const filteredQuestions = selectedType === 'all' 
+      ? selectedTopic.questions 
+      : selectedTopic.questions.filter(q => q.type === selectedType);
+
+    // 统计各类型题目的已完成数量
+    const getTypeCount = (type) => {
+      return selectedTopic.questions.filter(q => q.type === type).length;
+    };
 
     return (
       <div style={styles.quizContainer}>
@@ -152,82 +438,175 @@ export const Quiz = () => {
           <h2 style={styles.quizTitle}>{selectedTopic.topicTitle}</h2>
           <div style={styles.quizActions}>
             <span style={styles.quizCount}>
-              已完成 {Object.keys(submitted).filter(id => selectedTopic.questions.find(q => q.id === id)).length}/{selectedTopic.questions.length}
+              已做 {submittedCount}/20
             </span>
             <button onClick={resetTopic} style={styles.resetButton}>🔄 重置</button>
           </div>
         </div>
 
+        {/* 题型筛选标签 */}
+        <div style={styles.typeFilter}>
+          <button
+            onClick={() => setSelectedType('all')}
+            style={{
+              ...styles.typeFilterButton,
+              ...(selectedType === 'all' ? styles.typeFilterButtonActive : {})
+            }}
+          >
+            全部(20)
+          </button>
+          <button
+            onClick={() => setSelectedType('single')}
+            style={{
+              ...styles.typeFilterButton,
+              ...(selectedType === 'single' ? styles.typeFilterButtonActive : {})
+            }}
+          >
+            单选(10)
+          </button>
+          <button
+            onClick={() => setSelectedType('multiple')}
+            style={{
+              ...styles.typeFilterButton,
+              ...(selectedType === 'multiple' ? styles.typeFilterButtonActive : {})
+            }}
+          >
+            多选(5)
+          </button>
+          <button
+            onClick={() => setSelectedType('truefalse')}
+            style={{
+              ...styles.typeFilterButton,
+              ...(selectedType === 'truefalse' ? styles.typeFilterButtonActive : {})
+            }}
+          >
+            判断(5)
+          </button>
+        </div>
+
         <div style={styles.questionsList}>
-          {selectedTopic.questions.map((question, qIndex) => (
-            <div key={question.id} style={styles.questionCard}>
-              <div style={styles.questionHeader}>
-                <span style={styles.questionNumber}>第 {qIndex + 1} 题</span>
-                {submitted[question.id] && (
-                  <span style={{
-                    ...styles.questionStatus,
-                    color: userAnswers[question.id] === question.correct ? '#4caf50' : '#f44336'
-                  }}>
-                    {userAnswers[question.id] === question.correct ? '✅ 正确' : '❌ 错误'}
-                  </span>
-                )}
-              </div>
-              <h3 style={styles.questionText}>{question.question}</h3>
-              <div style={styles.optionsList}>
-                {question.options.map((option, oIndex) => {
-                  let optionStyle = { ...styles.option };
-                  if (submitted[question.id]) {
-                    if (oIndex === question.correct) {
-                      optionStyle = { ...optionStyle, ...styles.optionCorrect };
-                    } else if (oIndex === userAnswers[question.id] && oIndex !== question.correct) {
-                      optionStyle = { ...optionStyle, ...styles.optionWrong };
-                    }
-                  } else if (userAnswers[question.id] === oIndex) {
-                    optionStyle = { ...optionStyle, ...styles.optionSelected };
-                  }
-
-                  return (
-                    <button
-                      key={oIndex}
-                      onClick={() => selectAnswer(question.id, oIndex)}
-                      style={optionStyle}
-                      disabled={submitted[question.id]}
-                    >
-                      <span style={styles.optionLabel}>{String.fromCharCode(65 + oIndex)}.</span>
-                      <span>{option}</span>
-                      {submitted[question.id] && oIndex === question.correct && ' ✓'}
-                      {submitted[question.id] && userAnswers[question.id] === oIndex && oIndex !== question.correct && ' ✗'}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {!submitted[question.id] && (
-                <button
-                  onClick={() => submitQuestion(question)}
-                  disabled={userAnswers[question.id] === undefined}
-                  style={{
-                    ...styles.submitButton,
-                    ...(userAnswers[question.id] === undefined ? styles.submitButtonDisabled : {})
-                  }}
-                >
-                  提交答案
-                </button>
-              )}
-
-              {submitted[question.id] && (
-                <div style={{
-                  ...styles.explanation,
-                  ...(userAnswers[question.id] === question.correct ? styles.explanationCorrect : styles.explanationWrong)
-                }}>
-                  <p style={styles.explanationText}>{question.explanation}</p>
-                </div>
-              )}
-            </div>
-          ))}
+          {filteredQuestions.map((question, qIndex) => {
+            if (question.type === 'truefalse') {
+              return renderTrueFalseQuestion(question, qIndex);
+            } else if (question.type === 'multiple') {
+              return renderMultipleQuestion(question, qIndex);
+            } else {
+              return renderSingleQuestion(question, qIndex);
+            }
+          })}
         </div>
       </div>
     );
+  };
+
+  const renderMistakeQuestion = (mistake) => {
+    const question = mistake.question;
+    const typeLabel = getTypeLabel(question.type);
+
+    if (question.type === 'multiple') {
+      const correctAns = question.correct || [];
+      return (
+        <div key={mistake.id} style={styles.mistakeCard}>
+          <div style={styles.mistakeHeader}>
+            <span style={styles.mistakeTopic}>{mistake.topicTitle}</span>
+            <span style={styles.mistakeDate}>{mistake.addedAt}</span>
+          </div>
+          <h3 style={styles.mistakeQuestion}>{typeLabel} {question.question}</h3>
+          <div style={styles.mistakeOptions}>
+            {question.options.map((opt, idx) => {
+              const isCorrectOption = correctAns.includes(idx);
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    ...styles.mistakeOption,
+                    ...(isCorrectOption ? styles.mistakeOptionCorrect : {}),
+                    ...(!isCorrectOption && Array.isArray(mistake.userAnswer) && mistake.userAnswer.includes(idx) ? styles.mistakeOptionWrong : {})
+                  }}
+                >
+                  {String.fromCharCode(65 + idx)}. {opt} {isCorrectOption && '✓'}
+                </div>
+              );
+            })}
+          </div>
+          <div style={styles.mistakeExplanation}>
+            💡 {question.explanation}
+          </div>
+          <button
+            onClick={() => removeFromMistakeBook(mistake.questionId)}
+            style={styles.removeMistakeButton}
+          >
+            ✓ 已掌握，移除错题本
+          </button>
+        </div>
+      );
+    } else if (question.type === 'truefalse') {
+      return (
+        <div key={mistake.id} style={styles.mistakeCard}>
+          <div style={styles.mistakeHeader}>
+            <span style={styles.mistakeTopic}>{mistake.topicTitle}</span>
+            <span style={styles.mistakeDate}>{mistake.addedAt}</span>
+          </div>
+          <h3 style={styles.mistakeQuestion}>{typeLabel} {question.question}</h3>
+          <div style={styles.trueFalseOptions}>
+            <div style={{
+              ...styles.trueFalseDisplay,
+              ...(question.correct === true ? styles.trueFalseCorrect : styles.trueFalseWrong)
+            }}>
+              ✓ 正确 {question.correct === true && '✓'}
+            </div>
+            <div style={{
+              ...styles.trueFalseDisplay,
+              ...(question.correct === false ? styles.trueFalseCorrect : styles.trueFalseWrong)
+            }}>
+              ✗ 错误 {question.correct === false && '✓'}
+            </div>
+          </div>
+          <div style={styles.mistakeExplanation}>
+            💡 {question.explanation}
+          </div>
+          <button
+            onClick={() => removeFromMistakeBook(mistake.questionId)}
+            style={styles.removeMistakeButton}
+          >
+            ✓ 已掌握，移除错题本
+          </button>
+        </div>
+      );
+    } else {
+      return (
+        <div key={mistake.id} style={styles.mistakeCard}>
+          <div style={styles.mistakeHeader}>
+            <span style={styles.mistakeTopic}>{mistake.topicTitle}</span>
+            <span style={styles.mistakeDate}>{mistake.addedAt}</span>
+          </div>
+          <h3 style={styles.mistakeQuestion}>{typeLabel} {question.question}</h3>
+          <div style={styles.mistakeOptions}>
+            {question.options.map((opt, idx) => (
+              <div
+                key={idx}
+                style={{
+                  ...styles.mistakeOption,
+                  ...(idx === question.correct ? styles.mistakeOptionCorrect : {}),
+                  ...(idx === mistake.userAnswer && idx !== question.correct ? styles.mistakeOptionWrong : {})
+                }}
+              >
+                {String.fromCharCode(65 + idx)}. {opt}
+              </div>
+            ))}
+          </div>
+          <div style={styles.mistakeExplanation}>
+            💡 {question.explanation}
+          </div>
+          <button
+            onClick={() => removeFromMistakeBook(mistake.questionId)}
+            style={styles.removeMistakeButton}
+          >
+            ✓ 已掌握，移除错题本
+          </button>
+        </div>
+      );
+    }
   };
 
   const renderMistakeBook = () => (
@@ -241,38 +620,7 @@ export const Quiz = () => {
         </div>
       ) : (
         <div style={styles.mistakeList}>
-          {mistakeBook.map((mistake) => (
-            <div key={mistake.id} style={styles.mistakeCard}>
-              <div style={styles.mistakeHeader}>
-                <span style={styles.mistakeTopic}>{mistake.topicTitle}</span>
-                <span style={styles.mistakeDate}>{mistake.addedAt}</span>
-              </div>
-              <h3 style={styles.mistakeQuestion}>{mistake.question.question}</h3>
-              <div style={styles.mistakeOptions}>
-                {mistake.question.options.map((opt, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      ...styles.mistakeOption,
-                      ...(idx === mistake.question.correct ? styles.mistakeOptionCorrect : {}),
-                      ...(idx === mistake.userAnswer && idx !== mistake.question.correct ? styles.mistakeOptionWrong : {})
-                    }}
-                  >
-                    {String.fromCharCode(65 + idx)}. {opt}
-                  </div>
-                ))}
-              </div>
-              <div style={styles.mistakeExplanation}>
-                💡 {mistake.question.explanation}
-              </div>
-              <button
-                onClick={() => removeFromMistakeBook(mistake.questionId)}
-                style={styles.removeMistakeButton}
-              >
-                ✓ 已掌握，移除错题本
-              </button>
-            </div>
-          ))}
+          {mistakeBook.map((mistake) => renderMistakeQuestion(mistake))}
         </div>
       )}
     </div>
@@ -321,13 +669,25 @@ export const Quiz = () => {
                   {item.isCorrect ? '✅ 正确' : '❌ 错误'}
                 </span>
               </div>
-              <p style={styles.historyQuestion}>{item.question}</p>
+              <p style={styles.historyQuestion}>{getTypeLabel(item.type)} {item.question}</p>
               <div style={styles.historyFooter}>
                 <span style={styles.historyDate}>{item.timestamp}</span>
-                <span style={styles.historyAnswer}>
-                  你的答案: {String.fromCharCode(65 + item.userAnswer)} |
-                  正确答案: {String.fromCharCode(65 + item.correctAnswer)}
-                </span>
+                {item.type === 'multiple' ? (
+                  <span style={styles.historyAnswer}>
+                    你的答案: {Array.isArray(item.userAnswer) ? item.userAnswer.map(i => String.fromCharCode(65 + i)).join(', ') : item.userAnswer} |
+                    正确答案: {Array.isArray(item.correctAnswer) ? item.correctAnswer.map(i => String.fromCharCode(65 + i)).join(', ') : item.correctAnswer}
+                  </span>
+                ) : item.type === 'truefalse' ? (
+                  <span style={styles.historyAnswer}>
+                    你的答案: {item.userAnswer === true ? '正确' : '错误'} |
+                    正确答案: {item.correctAnswer === true ? '正确' : '错误'}
+                  </span>
+                ) : (
+                  <span style={styles.historyAnswer}>
+                    你的答案: {String.fromCharCode(65 + item.userAnswer)} |
+                    正确答案: {String.fromCharCode(65 + item.correctAnswer)}
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -479,6 +839,27 @@ const styles = {
     fontSize: '14px',
     color: '#666'
   },
+  typeFilter: {
+    display: 'flex',
+    gap: '8px',
+    marginBottom: '20px',
+    flexWrap: 'wrap'
+  },
+  typeFilterButton: {
+    padding: '8px 16px',
+    border: '2px solid #e0e0e0',
+    borderRadius: '20px',
+    background: 'white',
+    color: '#666',
+    fontSize: '13px',
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  },
+  typeFilterButtonActive: {
+    borderColor: '#667eea',
+    background: '#667eea',
+    color: 'white'
+  },
   resetButton: {
     padding: '8px 16px',
     background: '#fff3e0',
@@ -501,8 +882,17 @@ const styles = {
   },
   questionHeader: {
     display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '12px'
+    alignItems: 'center',
+    marginBottom: '12px',
+    gap: '8px'
+  },
+  typeTag: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#fff',
+    background: '#667eea',
+    padding: '4px 10px',
+    borderRadius: '4px'
   },
   questionNumber: {
     fontSize: '14px',
@@ -511,7 +901,8 @@ const styles = {
   },
   questionStatus: {
     fontSize: '14px',
-    fontWeight: 600
+    fontWeight: 600,
+    marginLeft: 'auto'
   },
   questionText: {
     fontSize: '16px',
@@ -552,6 +943,103 @@ const styles = {
   optionLabel: {
     fontWeight: 600,
     color: '#666'
+  },
+  trueFalseOptions: {
+    display: 'flex',
+    gap: '12px'
+  },
+  trueFalseButton: {
+    flex: 1,
+    padding: '14px 20px',
+    border: '2px solid #e0e0e0',
+    borderRadius: '8px',
+    background: 'white',
+    cursor: 'pointer',
+    fontSize: '15px',
+    fontWeight: 600,
+    transition: 'all 0.2s'
+  },
+  codeBlock: {
+    background: '#1e1e1e',
+    borderRadius: '8px',
+    padding: '16px',
+    marginBottom: '16px',
+    overflow: 'auto'
+  },
+  codePre: {
+    margin: 0,
+    fontFamily: 'Consolas, Monaco, monospace',
+    fontSize: '14px',
+    color: '#d4d4d4',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word'
+  },
+  blankInputs: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    marginBottom: '16px'
+  },
+  blankInputWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px'
+  },
+  blankLabel: {
+    fontSize: '14px',
+    fontWeight: 600,
+    color: '#667eea',
+    minWidth: '60px'
+  },
+  blankInput: {
+    flex: 1,
+    padding: '10px 14px',
+    border: '2px solid #e0e0e0',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontFamily: 'Consolas, Monaco, monospace'
+  },
+  codeActions: {
+    display: 'flex',
+    gap: '12px',
+    marginBottom: '16px'
+  },
+  runButton: {
+    padding: '10px 24px',
+    background: '#4caf50',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 600
+  },
+  codeOutput: {
+    background: '#f5f5f5',
+    borderRadius: '8px',
+    padding: '12px',
+    marginTop: '12px'
+  },
+  codeOutputLabel: {
+    fontSize: '13px',
+    color: '#666',
+    marginBottom: '8px'
+  },
+  codeOutputText: {
+    margin: 0,
+    fontFamily: 'Consolas, Monaco, monospace',
+    fontSize: '13px',
+    color: '#333',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word'
+  },
+  correctAnswer: {
+    marginTop: '12px',
+    padding: '8px 12px',
+    background: '#e8f5e9',
+    borderRadius: '6px',
+    fontSize: '13px',
+    color: '#2e7d32'
   },
   submitButton: {
     marginTop: '16px',
@@ -651,6 +1139,22 @@ const styles = {
     color: '#2e7d32'
   },
   mistakeOptionWrong: {
+    background: '#ffebee',
+    color: '#c62828'
+  },
+  trueFalseDisplay: {
+    flex: 1,
+    padding: '12px',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: 600,
+    textAlign: 'center'
+  },
+  trueFalseCorrect: {
+    background: '#e8f5e9',
+    color: '#2e7d32'
+  },
+  trueFalseWrong: {
     background: '#ffebee',
     color: '#c62828'
   },

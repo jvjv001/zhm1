@@ -535,7 +535,7 @@ for day in range(1, days_in_month + 1):
           <div style={styles.statCard}>
             <div style={styles.statIcon}>📝</div>
             <div style={styles.statNumber}>
-              <AnimatedCounter target={60} suffix="+" />
+              <AnimatedCounter target={240} suffix="+" />
             </div>
             <div style={styles.statLabel}>练习题</div>
             <div style={styles.statDesc}>知识巩固训练</div>
